@@ -72,7 +72,31 @@ const BarChart = ({ data, children }) => {
 const Bar = ({ dataKey, fill, name, radius, opacity, children }) => null;
 const Cell = ({ fill }) => null;
 
-// CSS Line Chart — dots as absolute-positioned divs, lines as SVG overlay
+// Pixel-accurate SVG line overlay (measures container via ref)
+const SvgLineOverlay = ({ seriesList }) => {
+  const ref = React.useRef(null);
+  const [dim, setDim] = React.useState(null);
+  React.useEffect(() => {
+    const measure = () => { if (ref.current) { const r = ref.current.getBoundingClientRect(); if (r.width > 0) setDim({ w: r.width, h: r.height }); } };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  return <div ref={ref} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+    {dim && <svg width={dim.w} height={dim.h} style={{ position: "absolute", inset: 0 }}>
+      {seriesList.map((s, si) => {
+        const px = s.pts.map(p => ({ x: (p.xPct / 100) * dim.w, y: dim.h - (p.yPct / 100) * dim.h }));
+        return <React.Fragment key={si}>
+          {s.fill && <path d={"M" + px.map(p => p.x+","+p.y).join("L") + "L"+px[px.length-1].x+","+dim.h+"L"+px[0].x+","+dim.h+"Z"} fill={s.color} opacity={0.12} />}
+          <polyline points={px.map(p => p.x+","+p.y).join(" ")} fill="none" stroke={s.color} strokeWidth={s.strokeWidth || 2} strokeLinejoin="round" strokeLinecap="round" />
+          {s.dots !== false && px.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3} fill={s.color} />)}
+        </React.Fragment>;
+      })}
+    </svg>}
+  </div>;
+};
+
+// Line Chart with pixel-accurate SVG lines
 const LineChart = ({ data, children }) => {
   const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
   if (!data || !data.length || !lines.length) return <div style={{height:"100%"}} />;
@@ -84,6 +108,11 @@ const LineChart = ({ data, children }) => {
   const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(min + (range * i / (yTickCount - 1))));
   const toX = (i) => data.length > 1 ? (i / (data.length - 1)) * 100 : 50;
   const toY = (v) => ((v - min) / range) * 100;
+  const seriesList = lines.map(line => ({
+    color: "#" + (line.props.stroke || "3B82F6").replace("#",""),
+    strokeWidth: line.props.strokeWidth || 2,
+    pts: data.map((d, i) => ({ xPct: toX(i), yPct: toY(d[line.props.dataKey] || 0) })),
+  }));
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -92,20 +121,7 @@ const LineChart = ({ data, children }) => {
         </div>
         <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
           {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          {lines.map((line, li) => {
-            const col = "#" + (line.props.stroke || "3B82F6").replace("#","");
-            const pts = data.map((d, i) => ({ x: toX(i), y: toY(d[line.props.dataKey] || 0) }));
-            return <React.Fragment key={li}>
-              {pts.map((p, pi) => pi < pts.length - 1 ? (() => {
-                const p2 = pts[pi+1];
-                const dx = p2.x - p.x, dy = p2.y - p.y;
-                const len = Math.sqrt(dx*dx + dy*dy);
-                const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-                return <div key={pi} style={{ position: "absolute", bottom: p.y+"%", left: p.x+"%", width: len+"%", height: 2, background: col, transformOrigin: "0 50%", transform: "rotate("+angle+"deg)" }} />;
-              })() : null)}
-              {pts.map((p, pi) => <div key={"d"+pi} style={{ position: "absolute", bottom: (p.y-0.8)+"%", left: (p.x-0.4)+"%", width: 5, height: 5, borderRadius: "50%", background: col }} />)}
-            </React.Fragment>;
-          })}
+          <SvgLineOverlay seriesList={seriesList} />
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", marginLeft: 38 }}>
@@ -122,7 +138,7 @@ const LineChart = ({ data, children }) => {
 
 const Line = ({ dataKey, stroke, strokeWidth, name, dot, strokeDasharray }) => null;
 
-// CSS Area Chart — filled polygons via clip-path, lines via CSS segments
+// Area Chart with pixel-accurate SVG lines + filled areas
 const AreaChart = ({ data, children }) => {
   const areas = React.Children.toArray(children).filter(c => c && c.type === Area);
   if (!data || !data.length) return <div style={{height:"100%"}} />;
@@ -134,6 +150,12 @@ const AreaChart = ({ data, children }) => {
   const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(min + (range * i / (yTickCount - 1))));
   const toX = (i) => data.length > 1 ? (i / (data.length - 1)) * 100 : 50;
   const toY = (v) => ((v - min) / range) * 100;
+  const seriesList = areas.map(area => ({
+    color: "#" + (area.props.stroke || "3B82F6").replace("#",""),
+    strokeWidth: area.props.strokeWidth || 2,
+    fill: true, dots: false,
+    pts: data.map((d, i) => ({ xPct: toX(i), yPct: toY(d[area.props.dataKey] || 0) })),
+  }));
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -142,21 +164,7 @@ const AreaChart = ({ data, children }) => {
         </div>
         <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
           {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          {areas.map((area, ai) => {
-            const col = "#" + (area.props.stroke || "3B82F6").replace("#","");
-            const pts = data.map((d, i) => ({ x: toX(i), y: toY(d[area.props.dataKey] || 0) }));
-            const clipPoly = pts.map(p => p.x+"% "+(100-p.y)+"%").join(", ") + ", 100% 100%, 0% 100%";
-            return <React.Fragment key={ai}>
-              <div style={{ position: "absolute", inset: 0, background: col, opacity: 0.1, clipPath: "polygon("+clipPoly+")" }} />
-              {pts.map((p, pi) => pi < pts.length - 1 ? (() => {
-                const p2 = pts[pi+1];
-                const dx = p2.x - p.x, dy = p2.y - p.y;
-                const len = Math.sqrt(dx*dx + dy*dy);
-                const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-                return <div key={pi} style={{ position: "absolute", bottom: p.y+"%", left: p.x+"%", width: len+"%", height: 2, background: col, transformOrigin: "0 50%", transform: "rotate("+angle+"deg)" }} />;
-              })() : null)}
-            </React.Fragment>;
-          })}
+          <SvgLineOverlay seriesList={seriesList} />
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", marginLeft: 38 }}>
@@ -205,25 +213,14 @@ const ComposedChart = ({ data, children }) => {
               return <div key={di+"-"+bi} style={{ position: "absolute", bottom: 0, left: left+"%", width: barW+"%", height: pct+"%", background: col, opacity: b.props.opacity||0.85, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />;
             })
           )}
-          {lines.map((l, li) => {
-            const col = l.props.stroke || "#EF4444";
-            const pts = data.map((d, di) => {
-              const v = d[l.props.dataKey] || 0;
-              const x = di * groupW + groupW * 0.5;
-              const y = niceMax > 0 ? (v / niceMax) * 100 : 0;
-              return { x, y };
-            });
-            return <React.Fragment key={"line-"+li}>
-              {pts.map((p, pi) => pi < pts.length - 1 ? (() => {
-                const p2 = pts[pi+1];
-                const dx = p2.x - p.x, dy = p2.y - p.y;
-                const len = Math.sqrt(dx*dx + dy*dy);
-                const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
-                return <div key={pi} style={{ position: "absolute", bottom: p.y+"%", left: p.x+"%", width: len+"%", height: 2, background: col, transformOrigin: "0 50%", transform: "rotate("+angle+"deg)", zIndex: 2 }} />;
-              })() : null)}
-              {pts.map((p, pi) => <div key={"d"+pi} style={{ position: "absolute", bottom: "calc("+p.y+"% - 3px)", left: "calc("+p.x+"% - 3px)", width: 6, height: 6, borderRadius: "50%", background: col, zIndex: 3 }} />)}
-            </React.Fragment>;
-          })}
+          <SvgLineOverlay seriesList={lines.map(l => ({
+            color: l.props.stroke || "#EF4444",
+            strokeWidth: l.props.strokeWidth || 2,
+            pts: data.map((d, di) => ({
+              xPct: di * groupW + groupW * 0.5,
+              yPct: niceMax > 0 ? (d[l.props.dataKey] || 0) / niceMax * 100 : 0
+            })),
+          }))} />
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 36, padding: "4px 0" }}>
