@@ -28,35 +28,45 @@ const ResponsiveContainer = ({ children, width, height }) => (
   <div style={{ width: width || "100%", height: height || 200, position: "relative" }}>{children}</div>
 );
 
-// Simple Bar Chart with Y-axis labels
+// SVG-based Bar Chart with Y-axis (CSS % heights break in nested flex)
 const BarChart = ({ data, children }) => {
   const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
-  const max = Math.max(...data.map(d => Math.max(...bars.map(b => Math.abs(d[b.props.dataKey] || 0)))));
-  const niceMax = Math.ceil(max / 50) * 50;
+  const allVals = data.flatMap(d => bars.map(b => Math.abs(d[b.props.dataKey] || 0)));
+  const rawMax = Math.max(...allVals);
+  const niceMax = Math.ceil(rawMax / 50) * 50 || rawMax || 100;
   const yTicks = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
+  const W = 100, H = 100;
+  const gw = W / data.length;
+  const bw = gw * 0.6 / Math.max(bars.length, 1);
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex" }}>
-        <div style={{ width: 32, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 20, paddingRight: 4 }}>
+        <div style={{ width: 32, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
           {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
         </div>
-        <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 2, padding: "0 4px", borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f * 100) + "%", borderTop: "1px dashed #F1F5F9" }} />)}
-          {data.map((d, i) => (
-            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-              {bars.map((b, bi) => {
+        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
+          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
+          <svg viewBox={"0 0 "+W+" "+H} style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+            {data.map((d, di) =>
+              bars.map((b, bi) => {
                 const v = d[b.props.dataKey] || 0;
-                const color = b.props.fill || (b.props.children && Array.isArray(React.Children.toArray(b.props.children)) ? undefined : "#3B82F6");
-                const cellColors = React.Children.toArray(b.props.children || []).filter(c => c && c.type === Cell);
-                const barColor = cellColors[i] ? cellColors[i].props.fill : color || "#3B82F6";
-                const pct = niceMax > 0 ? (Math.abs(v) / niceMax) * 100 : 0;
-                return <div key={bi} style={{ width: "80%", height: pct + "%", minHeight: v !== 0 ? 2 : 0, background: barColor, borderRadius: "3px 3px 0 0", opacity: b.props.opacity || 1, transition: "height 0.5s ease" }} />;
-              })}
-              <div style={{ fontSize: 8, color: "#94A3B8", marginTop: 4, whiteSpace: "nowrap" }}>{d[data._xKey || Object.keys(d)[0]]}</div>
-            </div>
-          ))}
+                const clr = b.props.fill || "#3B82F6";
+                const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
+                const col = cells[di] ? cells[di].props.fill : clr;
+                const bh = niceMax > 0 ? (Math.abs(v)/niceMax)*H : 0;
+                const x = di*gw + gw*0.2 + bi*bw;
+                return <rect key={di+"-"+bi} x={x} y={H-bh} width={bw} height={bh} fill={col} opacity={b.props.opacity||0.85} rx={0.3} />;
+              })
+            )}
+          </svg>
         </div>
       </div>
+      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 32, padding: "4px 0" }}>
+        {data.map((d, i) => <span key={i} style={{ fontSize: 7, color: "#94A3B8", whiteSpace: "nowrap" }}>{d[Object.keys(d)[0]]}</span>)}
+      </div>
+      {bars.length > 1 && <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        {bars.map((b,i) => <span key={i} style={{fontSize:9,color:b.props.fill||"#3B82F6"}}>{"\u25A0"} {b.props.name||b.props.dataKey}</span>)}
+      </div>}
     </div>
   );
 };
@@ -92,7 +102,7 @@ const LineChart = ({ data, children }) => {
                 const y = h - ((v - min) / range) * h;
                 return x + "," + y;
               }).filter(Boolean);
-              return <polyline key={li} points={points.join(" ")} fill="none" stroke={"#" + (line.props.stroke || "3B82F6").replace("#","")} strokeWidth={1.5} strokeDasharray={line.props.strokeDasharray || ""} />;
+              return <polyline key={li} points={points.join(" ")} fill="none" stroke={"#" + (line.props.stroke || "3B82F6").replace("#","")} strokeWidth={line.props.strokeWidth || 1.5} strokeDasharray={line.props.strokeDasharray || ""} vectorEffect="non-scaling-stroke" />;
             })}
           </svg>
         </div>
@@ -141,7 +151,7 @@ const AreaChart = ({ data, children }) => {
               const col = (area.props.stroke || "3B82F6").replace("#","");
               return <React.Fragment key={ai}>
                 <path d={pathD} fill={"#"+col} opacity={0.1} />
-                <polyline points={pts.map(p=>p.x+","+p.y).join(" ")} fill="none" stroke={"#"+col} strokeWidth={1.5} />
+                <polyline points={pts.map(p=>p.x+","+p.y).join(" ")} fill="none" stroke={"#"+col} strokeWidth={area.props.strokeWidth || 1.5} vectorEffect="non-scaling-stroke" />
               </React.Fragment>;
             })}
           </svg>
@@ -161,8 +171,69 @@ const AreaChart = ({ data, children }) => {
 
 const Area = ({ dataKey, stroke, fill, strokeWidth, name, type }) => null;
 
-// Composed Chart = just a BarChart (simplified)
-const ComposedChart = BarChart;
+// Composed Chart — renders Bar children as SVG rects + Line children as SVG polyline overlay
+const ComposedChart = ({ data, children }) => {
+  const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
+  const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
+  const allBarVals = data.flatMap(d => bars.map(b => Math.abs(d[b.props.dataKey] || 0)));
+  const allLineVals = data.flatMap(d => lines.map(l => Math.abs(d[l.props.dataKey] || 0)));
+  const allVals = [...allBarVals, ...allLineVals];
+  const rawMax = Math.max(...allVals);
+  const niceMax = Math.ceil(rawMax / 50) * 50 || rawMax || 100;
+  const yTicks = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
+  const W = 100, H = 100;
+  const gw = W / data.length;
+  const bw = gw * 0.6 / Math.max(bars.length, 1);
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex" }}>
+        <div style={{ width: 32, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
+          {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
+        </div>
+        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
+          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
+          <svg viewBox={"0 0 "+W+" "+H} style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+            {data.map((d, di) =>
+              bars.map((b, bi) => {
+                const v = d[b.props.dataKey] || 0;
+                const clr = b.props.fill || "#3B82F6";
+                const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
+                const col = cells[di] ? cells[di].props.fill : clr;
+                const bh = niceMax > 0 ? (Math.abs(v)/niceMax)*H : 0;
+                const x = di*gw + gw*0.2 + bi*bw;
+                return <rect key={di+"-"+bi} x={x} y={H-bh} width={bw} height={bh} fill={col} opacity={b.props.opacity||0.85} rx={0.3} />;
+              })
+            )}
+            {lines.map((l, li) => {
+              const pts = data.map((d, di) => {
+                const v = d[l.props.dataKey] || 0;
+                const x = di * gw + gw * 0.5;
+                const y = niceMax > 0 ? H - (v / niceMax) * H : H;
+                return x + "," + y;
+              }).join(" ");
+              return <polyline key={"line-"+li} points={pts} fill="none" stroke={l.props.stroke || "#EF4444"} strokeWidth={l.props.strokeWidth || 0.8} vectorEffect="non-scaling-stroke" />;
+            })}
+            {lines.map((l, li) =>
+              data.map((d, di) => {
+                const v = d[l.props.dataKey] || 0;
+                const x = di * gw + gw * 0.5;
+                const y = niceMax > 0 ? H - (v / niceMax) * H : H;
+                return <circle key={"dot-"+li+"-"+di} cx={x} cy={y} r={0.8} fill={l.props.stroke || "#EF4444"} vectorEffect="non-scaling-stroke" />;
+              })
+            )}
+          </svg>
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 32, padding: "4px 0" }}>
+        {data.map((d, i) => <span key={i} style={{ fontSize: 7, color: "#94A3B8", whiteSpace: "nowrap" }}>{d[Object.keys(d)[0]]}</span>)}
+      </div>
+      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        {bars.map((b,i) => <span key={i} style={{fontSize:9,color:b.props.fill||"#3B82F6"}}>{"\u25A0"} {b.props.name||b.props.dataKey}</span>)}
+        {lines.map((l,i) => <span key={"ll-"+i} style={{fontSize:9,color:l.props.stroke||"#EF4444"}}>{"\u2014"} {l.props.name||l.props.dataKey}</span>)}
+      </div>
+    </div>
+  );
+};
 
 // Pie Chart
 const PieChart = ({ children }) => {
@@ -532,7 +603,7 @@ const risks = [
   { name: "Schlüsselkunde verloren", nameEn: "Key customer lost", prob: 2, impact: 4, cat: "Vertrieb", catEn: "Sales", mitigation: "Kundenbindung stärken, breitere Kundenbasis aufbauen", mitigationEn: "Strengthen customer retention, broaden customer base" },
   { name: "IT-Sicherheitsvorfall", nameEn: "IT security incident", prob: 2, impact: 3, cat: "IT", catEn: "IT", mitigation: "Backup-Strategie, Awareness-Schulung", mitigationEn: "Backup strategy, awareness training" },
   { name: "Lieferengpässe (Supply Chain)", nameEn: "Supply chain disruptions", prob: 3, impact: 3, cat: "Einkauf", catEn: "Procurement", mitigation: "Dual Sourcing, Sicherheitsbestand Standardprodukte", mitigationEn: "Dual sourcing, safety stock standard products" },
-  { name: "ISO-Zertifizierung scheitert", nameEn: "ISO certification fails", prob: 1, impact: 3, cat: "Qualität", catEn: "Quality", mitigation: "Frühzeitige Vorbereitung, Thoma verantwortlich", mitigationEn: "Early preparation, Thoma responsible" },
+  { name: "ISO-Zertifizierung scheitert", nameEn: "ISO certification fails", prob: 1, impact: 3, cat: "Qualität", catEn: "Quality", mitigation: "Frühzeitige Vorbereitung, Thomas verantwortlich", mitigationEn: "Early preparation, Thomas responsible" },
   { name: "Nahost-Krise: Lieferketten & Energiepreise", nameEn: "Middle East crisis: supply chains & energy prices", prob: 4, impact: 4, cat: "Geopolitik", catEn: "Geopolitics", mitigation: "EU-Sourcing stärken, Sicherheitsbestände, Dual Sourcing, Preisgleitklauseln", mitigationEn: "Strengthen EU sourcing, safety stocks, dual sourcing, price escalation clauses" },
   { name: "Stahl-/Materialpreise steigen (Nahost)", nameEn: "Steel/material prices rising (Middle East)", prob: 4, impact: 3, cat: "Einkauf", catEn: "Procurement", mitigation: "Rahmenverträge, alternative Lieferanten EU, Lagerbestand strategisch aufbauen", mitigationEn: "Framework contracts, EU alt. suppliers, strategic stock buildup" },
   { name: "Investitionen bringen keinen ROI", nameEn: "Investments yield no ROI", prob: 2, impact: 2, cat: "Strategie", catEn: "Strategy", mitigation: "Test-and-Learn, 3-Monats-Reviews, KPIs", mitigationEn: "Test-and-learn, 3-month reviews, KPIs" },
@@ -846,7 +917,7 @@ function SummaryPage({ lang }) {
       <Grid cols="repeat(4, 1fr)" gap={16} style={{ marginBottom: 24 }}>
         {[
           { icon: "🌍", title: t("Internationalisierung","Internationalization"), target: t("Export 12,7% → 20%","Export 12.7% → 20%"), actions: t("AT/CH Direktvertrieb, NL/BE Partner, Website EN","AT/CH direct sales, NL/BE partners, website EN"), invest: "12 T€", color: C.blue },
-          { icon: "🛒", title: t("Digitaler Vertrieb","Digital Sales"), target: t("Shop auf 500+ Artikel","Shop to 500+ articles"), actions: t("Multi-Currency, Marketing Automation, SEO International","Multi-currency, marketing automation, international SEO"), invest: "33 T€", color: C.teal },
+          { icon: "🛒", title: t("Digitaler Vertrieb","Digital Sales"), target: t("Shop auf 500+ Artikel","Shop to 500+ articles"), actions: t("Webshop Push, Marketing Automation, SEO International","Webshop push, marketing automation, international SEO"), invest: "34 T€", color: C.teal },
           { icon: "🤖", title: t("Robotik & Automation","Robotics & Automation"), target: t("5 Robotik-Kunden","5 robotics customers"), actions: t("2 Muster-Roboter, Integratoren ansprechen, Demos","2 sample robots, contact integrators, demos"), invest: "10 T€", color: C.copper },
           { icon: "⚡", title: t("KI & Prozesse","AI & Processes"), target: t("500h Admin gespart","500h admin saved"), actions: t("KI-Auftragsabwicklung, Chatbot, ISO-Zertifizierung","AI order processing, chatbot, ISO certification"), invest: "10 T€", color: C.navy },
         ].map((p, i) => (
@@ -868,10 +939,10 @@ function SummaryPage({ lang }) {
           {[
             { role: t("Vertrieb (Marcel, Alex O.)","Sales (Marcel, Alex O.)"), change: t("Neue Märkte AT/CH erschließen, Robotik-Kunden gewinnen, internationale Anfragen bearbeiten","Open new markets AT/CH, win robotics customers, handle international inquiries"), newSkills: t("Exportabwicklung, technische Robotik-Beratung, englischsprachige Kommunikation","Export processing, technical robotics consulting, English communication"), icon: "🎯" },
             { role: "Marketing & Digital (Martin)", change: t("KI-Chatbot aufbauen, Produktkonfigurator entwickeln, PIM einführen, Shop internationalisieren","Build AI chatbot, develop product configurator, implement PIM, internationalize shop"), newSkills: t("KI-Tool-Administration, PIM-Management, internationales SEO, Content-Produktion","AI tool admin, PIM management, international SEO, content production"), icon: "🚀" },
-            { role: t("Einkauf & IT (Thoma, Stefan)","Purchasing & IT (Thoma, Stefan)"), change: t("Dual Sourcing aufbauen, EU-Lieferanten qualifizieren, ISO-Zertifizierung durchführen","Build dual sourcing, qualify EU suppliers, complete ISO certification"), newSkills: t("Internationales Lieferantenmanagement, Preisgleitklauseln, Nahost-Monitoring","International supplier management, price escalation clauses, Middle East monitoring"), icon: "🔧" },
-            { role: t("Buchhaltung (Helge, Marion)","Accounting (Helge, Marion)"), change: t("Multi-Currency Abwicklung, internationales Controlling, Investitions-Tracking","Multi-currency processing, international controlling, investment tracking"), newSkills: t("Fremdwährungsbuchhaltung, KPI-Reporting, Szenario-Planung","Foreign currency accounting, KPI reporting, scenario planning"), icon: "📊" },
+            { role: t("Einkauf & IT (Thomas, Stefan)","Purchasing & IT (Thomas, Stefan)"), change: t("Dual Sourcing aufbauen, EU-Lieferanten qualifizieren, ISO-Zertifizierung durchführen","Build dual sourcing, qualify EU suppliers, complete ISO certification"), newSkills: t("Internationales Lieferantenmanagement, Preisgleitklauseln, Nahost-Monitoring","International supplier management, price escalation clauses, Middle East monitoring"), icon: "🔧" },
+            { role: t("Buchhaltung (Helge, Marion)","Accounting (Helge, Marion)"), change: t("Internationales Controlling, Investitions-Tracking, KPI-Reporting","International controlling, investment tracking, KPI reporting"), newSkills: t("KPI-Reporting, Szenario-Planung, Budgetkontrolle","KPI reporting, scenario planning, budget controlling"), icon: "📊" },
             { role: t("Lager (Alex G., Benni)","Warehouse (Alex G., Benni)"), change: t("Standardprodukt-Bundles aufbauen, 48h-Lieferversprechen umsetzen, Shop-Logistik","Build standard product bundles, implement 48h delivery promise, shop logistics"), newSkills: t("Kommissionierung Shop-Bestellungen, Bestandsoptimierung, Verpackungsstandards INT","Shop order picking, inventory optimization, international packaging standards"), icon: "📦" },
-            { role: t("Strategie (Sebastian)","Strategy (Sebastian)"), change: t("KI-Projekte leiten, Robotik-Markt erschließen, Key Accounts übernehmen, internationale Expansion steuern","Lead AI projects, open robotics market, take over key accounts, steer international expansion"), newSkills: t("Robotik-Vertrieb, KI-Projektmanagement, Messeplanung Motek/Automatica","Robotics sales, AI project management, trade fair planning Motek/Automatica"), icon: "⚡" },
+            { role: t("Strategie (Sebastian)","Strategy (Sebastian)"), change: t("KI-Projekte leiten, Robotik-Markt erschließen, Key Accounts übernehmen, internationale Expansion steuern","Lead AI projects, open robotics market, take over key accounts, steer international expansion"), newSkills: t("Robotik-Vertrieb, KI-Projektmanagement, Automatica-Planung","Robotics sales, AI project management, Automatica planning"), icon: "⚡" },
           ].map((r, i) => (
             <div key={i} style={{ padding: 12, borderRadius: 10, border: `1px solid ${C.border}`, background: `${C.bg}` }}>
               <div style={{ fontSize: 20, marginBottom: 4 }}>{r.icon}</div>
@@ -887,7 +958,7 @@ function SummaryPage({ lang }) {
       <Grid cols="repeat(3, 1fr)" gap={16} style={{ marginBottom: 24 }}>
         {[
           { title: "Quick Win #1", sub: t("Erste Robotik-Anfrage","First Robotics Inquiry"), desc: t("Top-10 Robotik-Integratoren identifizieren und proaktiv kontaktieren. Ziel: Erste qualifizierte Anfrage bis Ende Mai.","Identify top 10 robotics integrators and proactively contact them. Goal: First qualified inquiry by end of May."), who: "Sebastian", deadline: t("Mai '26","May '26"), color: C.copper },
-          { title: "Quick Win #2", sub: t("ISO-Zertifizierung","ISO Certification"), desc: t("Zertifizierung erfolgreich im Mai abschließen — öffnet Türen bei internationalen Kunden und gibt dem Team ein gemeinsames Erfolgserlebnis.","Complete certification in May — opens doors with international customers and gives the team a shared success experience."), who: "Thoma", deadline: t("Mai '26","May '26"), color: C.teal },
+          { title: "Quick Win #2", sub: t("ISO-Zertifizierung","ISO Certification"), desc: t("Zertifizierung erfolgreich im Mai abschließen — öffnet Türen bei internationalen Kunden und gibt dem Team ein gemeinsames Erfolgserlebnis.","Complete certification in May — opens doors with international customers and gives the team a shared success experience."), who: "Thomas", deadline: t("Mai '26","May '26"), color: C.teal },
           { title: "Quick Win #3", sub: t("Erster AT/CH-Kunde","First AT/CH Customer"), desc: t("Österreich-Pilotprojekt startet mit Kaltakquise. Ziel: Erste Bestellung aus AT/CH bis Ende Q2 — Beweis, dass Expansion funktioniert.","Austria pilot project starts with cold calling. Goal: First order from AT/CH by end of Q2 — proof that expansion works."), who: "Sebastian / Alex O.", deadline: t("Jun '26","Jun '26"), color: C.blue },
         ].map((qw, i) => (
           <Card key={i} accent={qw.color}>
@@ -946,7 +1017,7 @@ function FinancePage({ lang }) {
               
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
               <Bar yAxisId="left" dataKey="umsatz" fill={C.navy} radius={[4, 4, 0, 0]} name={t("Umsatz T€","Revenue k€")} opacity={0.85} />
-              
+              <Line dataKey="ergebnis" stroke={C.copper} strokeWidth={2} name={t("Ergebnis T€","Result k€")} />
             </ComposedChart>
           </ResponsiveContainer>
         </Card>
@@ -1243,6 +1314,51 @@ function ProductsPage({ lang }) {
           </div>
         </Card>
       </Grid>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginTop: 24 }}>
+        {/* Cash Cows: Wellengelenke & Kupplungen */}
+        <Card accent={C.blue}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Cash Cows: Wellengelenke & Kupplungen","Cash Cows: Universal Joints & Couplings")}</h3>
+          {[
+            { n: t("Kupplungen","Couplings"), val: "94 T\u20AC", growth: "-10%", desc: t("Leichter R\u00FCckgang von 104 auf 94 T\u20AC in 5 Jahren. Solide Marge (62%). Strategie: Bestand optimieren, Standardgr\u00F6\u00DFen ab Lager liefern. Cross-Selling mit Motoren und Getrieben verst\u00E4rken. Kein aktives Investment, aber Margenerhalt sichern.","Slight decline from 104 to 94 k\u20AC in 5 years. Solid margin (62%). Strategy: optimize inventory, deliver standard sizes from stock. Strengthen cross-selling with motors and gearboxes. No active investment, but secure margin retention."), action: t("MARGE SICHERN","SECURE MARGIN"), color: C.blue },
+            { n: t("Wellengelenke","Universal Joints"), val: "94 T\u20AC", growth: "+8%", desc: t("Stabiler Umsatz mit leichtem Wachstum (+8%). Marge bei 60%. Strategie: Standardprogramm beibehalten, Sondergr\u00F6\u00DFen bei Bedarf anbieten. Synergiepotenzial mit Kupplungsprogramm nutzen. Vertrieb \u00FCber Online-Shop ausbauen.","Stable revenue with slight growth (+8%). Margin at 60%. Strategy: maintain standard program, offer special sizes on demand. Leverage synergy with coupling program. Expand sales via online shop."), action: t("HALTEN & ONLINE","HOLD & ONLINE"), color: C.teal },
+          ].map((p, i) => (
+            <div key={i} style={{ marginBottom: 14, padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, background: `${p.color}06` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Tag color={C.textMid}>{p.val}</Tag>
+                  <Tag color={parseFloat(p.growth) >= 0 ? C.green : C.amber}>{p.growth}</Tag>
+                  <Tag color={p.color}>{p.action}</Tag>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+            </div>
+          ))}
+        </Card>
+
+        {/* Poor Dogs Assessment */}
+        <Card accent={C.red}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Poor Dogs: Detailbewertung & Strategie","Poor Dogs: Assessment & Strategy")}</h3>
+          {[
+            { n: t("Schneckengetriebe","Worm Gearboxes"), val: "85 T\u20AC", growth: "-27%", desc: t("R\u00FCckgang von 116 auf 85 T\u20AC. Technologisch veraltet, zunehmend durch effizientere Planetengetriebe ersetzt. Strategie: Sortiment reduzieren, nur margenstarke Standardgr\u00F6\u00DFen behalten. Keine Neuinvestition, kontrollierter R\u00FCckzug bis 2027.","Decline from 116 to 85 k\u20AC. Technologically outdated, increasingly replaced by more efficient planetary gearboxes. Strategy: reduce range, keep only high-margin standard sizes. No new investment, controlled exit by 2027."), action: t("AUSLAUFEN","PHASE OUT"), color: C.red },
+            { n: t("Kegelradgetriebe","Bevel Gearboxes"), val: "71 T\u20AC", growth: "-68%", desc: t("Dramatischer R\u00FCckgang von 224 auf 71 T\u20AC \u2014 st\u00E4rkster Verlust im Portfolio. Marktanteil verloren an g\u00FCnstigere Fernost-Anbieter. Strategie: Restbest\u00E4nde abverkaufen, keine Nachbestellung. Fokus auf h\u00F6herwertige Verzahnungsteile umlenken.","Dramatic decline from 224 to 71 k\u20AC \u2014 biggest loss in portfolio. Market share lost to cheaper Far East suppliers. Strategy: sell remaining stock, no reorders. Redirect focus to higher-value gearing parts."), action: t("ABVERKAUF","SELL OFF"), color: C.red },
+            { n: t("Alu-Rollenf\u00FChrungen","Alu Roller Guides"), val: "67 T\u20AC", growth: "-13%", desc: t("Moderater R\u00FCckgang von 77 auf 67 T\u20AC. Nischenprodukt f\u00FCr leichte Linearanwendungen. Strategie: Als Erg\u00E4nzung zum LinRol-Programm beibehalten, aber kein aktiver Vertrieb. Bei weiterem R\u00FCckgang unter 50 T\u20AC aus Sortiment nehmen.","Moderate decline from 77 to 67 k\u20AC. Niche product for light linear applications. Strategy: retain as complement to LinRol program, but no active sales effort. Remove from range if further decline below 50 k\u20AC."), action: t("BEOBACHTEN","MONITOR"), color: C.amber },
+          ].map((p, i) => (
+            <div key={i} style={{ marginBottom: 14, padding: 12, border: `1px solid ${p.color}30`, borderRadius: 10, background: `${p.color}06` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Tag color={C.textMid}>{p.val}</Tag>
+                  <Tag color={C.red}>{p.growth}</Tag>
+                  <Tag color={p.color}>{p.action}</Tag>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+            </div>
+          ))}
+        </Card>
+      </Grid>
     </div>
   );
 }
@@ -1343,8 +1459,8 @@ function PeoplePage({ lang }) {
     { name: "Sebastian", role: t("Stv. GF / Strategie","Deputy MD / Strategy"), ka: "0%", risk: "", focus: t("Strategie, Vertrieb Key Acc., KI, Projekte","Strategy, key acc. sales, AI, projects") },
     { name: "Marcel", role: t("Vertriebsleitung","Sales Manager"), ka: "0%", risk: t("⚠ Abwesend seit März, voraussichtl. bis Mai","⚠ Absent since March, est. until May"), focus: t("Key Accounts, Neukundenakquise, Preise","Key accounts, new customer acquisition, pricing") },
     { name: "Alex O.", role: t("Vertrieb Innendienst","Inside Sales"), ka: "20%", risk: "", focus: t("Auftragsabwicklung, techn. Beratung → E-Technik","Order processing, tech. consulting → E-tech") },
-    { name: "Thoma", role: t("Einkauf/IT/ISO","Purchasing/IT/ISO"), ka: "40%", risk: "", focus: t("Einkauf, IT-Admin, ISO Mai, Personal Lager","Purchasing, IT admin, ISO May, warehouse staff") },
-    { name: "Stefan", role: t("Einkauf","Purchasing"), ka: "—", risk: "", focus: t("Einkauf operativ, Lieferanten-Management","Operational purchasing, supplier management") },
+    { name: "Thomas", role: t("Einkauf/IT/ISO + Vertrieb","Purchasing/IT/ISO + Sales"), ka: "40%", risk: "", focus: t("Vertrieb 3 Tage/Woche + Einkauf 1 Tag/Woche + IT/ISO","Sales support 3 days/week + Purchasing 1 day/week + IT/ISO") },
+    { name: "Stefan", role: t("Einkauf","Purchasing"), ka: "—", risk: "", focus: t("Einkauf operativ + 1 Tag zus\u00E4tzlich Einkauf (Vertretung Thomas), Lieferanten-Mgmt","Operational purchasing + 1 extra day purchasing (covering Thomas), supplier mgmt") },
     { name: "Martin", role: "Marketing/Digital", ka: "40%", risk: "", focus: t("Marketing, KI-Tools, Konfigurator, PIM, Shop","Marketing, AI tools, configurator, PIM, shop") },
     { name: "Helge", role: t("Buchhaltung/Admin","Accounting/Admin"), ka: "40%", risk: "", focus: t("Buchhaltung, Administration, Controlling","Accounting, administration, controlling") },
     { name: "Marion", role: t("Buchhaltung","Accounting"), ka: "20%", risk: "", focus: t("Buchhaltung unterstützend","Accounting support") },
@@ -1371,12 +1487,11 @@ function PeoplePage({ lang }) {
       <Card style={{ marginBottom: 24 }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Team-Übersicht & Kapazitätsplanung","Team Overview & Capacity Planning")}</h3>
         <CompactTable
-          headers={["Name", t("Rolle","Role"), t("KA-Quote","STW"), t("Risiko/Status","Status"), t("Fokus 2026","Focus 2026")]}
+          headers={["Name", t("Rolle","Role"), t("KA-Quote","STW"), t("Fokus 2026","Focus 2026")]}
           rows={team.map(m => [
             <span style={{ fontWeight: 700 }}>{m.name}</span>,
             m.role,
             <Tag color={m.ka === "0%" ? C.green : C.amber}>{m.ka}</Tag>,
-            m.risk ? <Tag color={C.red}>{m.risk}</Tag> : <Tag color={C.green}>{t("Stabil","Stable")}</Tag>,
             <span style={{ fontSize: 10, color: C.textLight }}>{m.focus}</span>,
           ])}
         />
@@ -1463,20 +1578,16 @@ function BudgetPage({ lang }) {
     ]},
     { cat: t("Vertrieb & Marketing","Sales & Marketing"), items: [
       { name: "Google Ads (12 Monate DACH)", betrag: 18000, prio: 2, roi: t("~100 Leads → 20 Kunden → 150 T€ Umsatz","~100 leads → 20 customers → 150 k€ revenue") },
-      { name: t("Shop-Optimierung & Multi-Currency","Shop Optimization & Multi-Currency"), betrag: 15000, prio: 2, roi: t("Shop-Umsatz +100 T€, Conversion Rate +1%","Shop revenue +100 k€, conversion rate +1%") },
-      { name: t("Content & SEO-Agentur","Content & SEO Agency"), betrag: 12000, prio: 2, roi: t("Organic Traffic +200%, Markenbekanntheit","Organic traffic +200%, brand awareness") },
+      { name: t("Webshop Push (Ads, UX, Conversion)","Webshop Push (Ads, UX, Conversion)"), betrag: 10000, prio: 2, roi: t("Shop-Umsatz +100 T€, Conversion Rate +1%, Sichtbarkeit","Shop revenue +100 k€, conversion rate +1%, visibility") },
       { name: "LinkedIn Ads (3 Mo. Test)", betrag: 6000, prio: 2, roi: t("~30 Leads → 6 Kunden → 60 T€ Umsatz","~30 leads → 6 customers → 60 k€ revenue") },
     ]},
     { cat: t("Produkt & Lager","Product & Inventory"), items: [
       { name: t("Muster-Roboter (2 Stück)","Sample Robots (2 pcs)"), betrag: 10000, prio: 1, roi: t("Zukunftsmarkt-Einstieg, Demo-Möglichkeit","Future market entry, demo capability") },
-      { name: t("Standardprodukte ab Lager","Standard Products from Stock"), betrag: 15000, prio: 1, roi: t("48h-Lieferung → Kundenbindung, Shop-Revenue","48h delivery → customer retention, shop revenue") },
+      { name: t("Standardprodukte ab Lager","Standard Products from Stock"), betrag: 30000, prio: 1, roi: t("48h-Lieferung → Kundenbindung, Shop-Revenue","48h delivery → customer retention, shop revenue") },
     ]},
     { cat: t("Systeme & Prozesse","Systems & Processes"), items: [
 
-      { name: t("ISO-Zertifizierung (Mai)","ISO Certification (May)"), betrag: 5000, prio: 1, roi: t("Pflicht + Wettbewerbsvorteil, Türöffner INT","Mandatory + competitive advantage, door opener INT") },
-    ]},
-    { cat: t("Events (optional)","Events (optional)"), items: [
-      { name: "Motek Stuttgart (Okt '26)", betrag: 12000, prio: 2, roi: t("Automatisierungsmesse, Zielgruppe Integratoren","Automation trade fair, target group integrators") },
+      { name: t("ISO-Zertifizierung (Mai)","ISO Certification (May)"), betrag: 2000, prio: 1, roi: t("Pflicht + Wettbewerbsvorteil, Türöffner INT","Mandatory + competitive advantage, door opener INT") },
     ]},
   ];
 
@@ -1543,11 +1654,9 @@ function BudgetPage({ lang }) {
               {[
                 { kanal: t("AT/CH Direktvertrieb","AT/CH Direct Sales"), invest: "15 T€", output: "~200 T€", who: "Sebastian / Marcel", kpi: t("Neukunden AT/CH, Auftragseingang","New customers AT/CH, order intake"), start: t("Mai '26","May '26") },
                 { kanal: "Google + LinkedIn Ads", invest: "24 T€", output: "~210 T€", who: "Martin", kpi: "Leads, Conversion Rate, CAC", start: "Apr '26" },
-                { kanal: "Motek Stuttgart", invest: "12 T€", output: "~100 T€", who: "Sebastian / Marcel", kpi: t("Leads auf Messe, Follow-up Rate","Trade fair leads, follow-up rate"), start: t("Okt '26","Oct '26") },
-                { kanal: "Content & SEO", invest: "12 T€", output: "~50 T€", who: "Martin", kpi: "Organic Traffic, Ranking, Leads", start: t("Mai '26","May '26") },
-                { kanal: t("Shop-Ausbau","Shop Expansion"), invest: "15 T€", output: "~100 T€", who: "Martin", kpi: t("Artikel online, AOV, Conversion","Articles online, AOV, Conversion"), start: "Apr '26" },
+                { kanal: t("Webshop Push","Webshop Push"), invest: "10 T€", output: "~100 T€", who: "Martin", kpi: t("Artikel online, AOV, Conversion, Sichtbarkeit","Articles online, AOV, Conversion, visibility"), start: "Apr '26" },
                 { kanal: t("Robotik (Muster+Demo)","Robotics (Samples+Demo)"), invest: "10 T€", output: t("Langfristig","Long-term"), who: "Sebastian", kpi: t("Robotik-Kunden, Demo-Anfragen","Robotics customers, demo inquiries"), start: t("Mai '26","May '26") },
-                { kanal: t("Weiterbildung / ISO","Training / ISO"), invest: "8 T€", output: t("Qualitativ","Qualitative"), who: "Thoma / Sebastian", kpi: t("Zertifizierung, Kompetenz","Certification, competence"), start: "Apr '26" },
+                { kanal: t("Weiterbildung / ISO","Training / ISO"), invest: "8 T€", output: t("Qualitativ","Qualitative"), who: "Thomas / Sebastian", kpi: t("Zertifizierung, Kompetenz","Certification, competence"), start: "Apr '26" },
               ].map((r, i) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
                   <td style={{ padding: "8px 6px", fontWeight: 700, color: C.text }}>{r.kanal}</td>
@@ -1560,7 +1669,7 @@ function BudgetPage({ lang }) {
               ))}
               <tr style={{ borderTop: `2px solid ${C.navy}`, background: `${C.navy}08` }}>
                 <td style={{ padding: "8px 6px", fontWeight: 800, color: C.navy }}>{t("GESAMT","TOTAL")}</td>
-                <td style={{ padding: "8px 6px", fontWeight: 800, fontFamily: "'Playfair Display', 'Georgia', serif", color: C.navy }}>~96 T€</td>
+                <td style={{ padding: "8px 6px", fontWeight: 800, fontFamily: "'Playfair Display', 'Georgia', serif", color: C.navy }}>~67 T€</td>
                 <td style={{ padding: "8px 6px" }}><Tag color={C.green} filled>~660 T€</Tag></td>
                 <td colSpan={3} style={{ padding: "8px 6px", fontSize: 10, color: C.green, fontWeight: 700 }}>{t("ROI: ~353% · Rohertragsbeitrag: +215 T€","ROI: ~353% · Gross profit contribution: +215 k€")}</td>
               </tr>
@@ -1578,7 +1687,7 @@ function BudgetPage({ lang }) {
             { rule: t("Definition 'Qualified Lead' + einheitliche Angebotsvorlage","Define 'Qualified Lead' + standardized quote template"), detail: t("Klare Kriterien, wann ein Lead qualifiziert ist (Branche, Budget, Bedarf, Zeitrahmen). Standardisierte Angebotsvorlage für schnelle, professionelle Antworten.","Clear criteria when a lead is qualified (industry, budget, need, timeframe). Standardized quote template for fast, professional responses.") },
             { rule: t("48h-Regel: Jeder Lead bekommt innerhalb 2 Tagen ein Follow-up","48h rule: Every lead gets a follow-up within 2 days"), detail: t("Kein Lead darf liegen bleiben. Wer nicht in 48h reagiert, verliert den Kunden an den Wettbewerb. Tracking im Weekly Meeting.","No lead may be left unattended. Those who don't respond in 48h lose the customer to competition. Tracking in weekly meeting.") },
             { rule: t("Ads nur mit Landingpages + Tracking + Follow-up-Prozess","Ads only with landing pages + tracking + follow-up process"), detail: t("Google/LinkedIn Ads erst schalten, wenn Zielseite, GA4-Tracking und Follow-up-Prozess stehen. Sonst verbrennen wir Budget.","Only run Google/LinkedIn Ads when landing page, GA4 tracking and follow-up process are in place. Otherwise we burn budget.") },
-            { rule: t("Messe = Leadmaschine mit klarem Nachfassprozess","Trade fair = lead machine with clear follow-up process"), detail: t("Motek mit definierten Zielgruppen, vorqualifizierten Terminen und Nachfassung innerhalb 48h. Kein Messebesuch ohne Lead-Plan.","Motek with defined target groups, pre-qualified appointments and follow-up within 48h. No fair visit without lead plan.") },
+            { rule: t("Webshop = zentraler Vertriebskanal","Webshop = central sales channel"), detail: t("Alle Standardprodukte online, Conversion-Optimierung und gezielte Ads. Shop als 24/7-Vertriebskanal denken, nicht als Nebenprojekt.","All standard products online, conversion optimization and targeted ads. Think of shop as 24/7 sales channel, not side project.") },
             { rule: t("'Stop-Doing'-Slot in jedem Monthly Review","'Stop-Doing' slot in every monthly review"), detail: t("Fester Agendapunkt: Was beenden wir, weil es nicht liefert? Mut zum Abschalten. Frei werdende Ressourcen auf das umlenken, was funktioniert.","Fixed agenda item: What do we stop because it doesn't deliver? Courage to shut down. Redirect freed resources to what works.") },
           ].map((g, i) => (
             <div key={i} style={{ marginBottom: 10, paddingLeft: 14, borderLeft: `2px solid ${C.navy}25` }}>
@@ -1624,8 +1733,7 @@ function BudgetPage({ lang }) {
           {[
             { name: "Google Ads", invest: "18 T€", leads: "~100", kunden: t("~20","~20"), umsatz: "~150 T€", roi: "733%", color: C.green },
             { name: "LinkedIn Ads", invest: "6 T€", leads: "~30", kunden: t("~6","~6"), umsatz: "~60 T€", roi: "900%", color: C.green },
-            { name: "Content/SEO", invest: "12 T€", leads: "~50", kunden: t("~10","~10"), umsatz: "~80 T€", roi: "567%", color: C.green },
-            { name: t("Shop-Optimierung","Shop Optimization"), invest: "15 T€", leads: "—", kunden: t("Wiederkäufer","Repeat buyers"), umsatz: "+100 T€", roi: "567%", color: C.green },
+            { name: t("Webshop Push","Webshop Push"), invest: "10 T€", leads: "—", kunden: t("Wiederkäufer + Neukunden","Repeat + new buyers"), umsatz: "+100 T€", roi: "900%", color: C.green },
           ].map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < 3 ? `1px solid ${C.borderLight}` : "none" }}>
               <div style={{ flex: 1 }}>
@@ -1696,12 +1804,11 @@ function DigitalPage({ lang }) {
           <Card accent={C.blue} style={{ marginBottom: 16 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Digitaler Vertrieb & Website","Digital Sales & Website")}</h3>
             {[
-              { n: "B2B-Shop International", d: t("EUR/CHF Multi-Currency, Versandregeln AT/CH/NL, 500+ Artikel","EUR/CHF multi-currency, shipping rules AT/CH/NL, 500+ articles"), prio: "P1" },
+              { n: "B2B-Shop International", d: t("Versandregeln AT/CH/NL, 500+ Artikel, Conversion-Optimierung","Shipping rules AT/CH/NL, 500+ articles, conversion optimization"), prio: "P1" },
               { n: "SEO International", d: t("hreflang-Tags, Landingpages AT/CH/NL, lokale Keywords","hreflang tags, landing pages AT/CH/NL, local keywords"), prio: "P1" },
               { n: "GA4 + Conversion-Tracking", d: t("Baseline: CR, AOV, Sessions, Top-Produkte messen","Baseline: CR, AOV, sessions, measure top products"), prio: "P1" },
               { n: "Marketing Automation", d: t("Warenkorbabbruch, Newsletter-Sequenzen, Re-Targeting","Cart abandonment, newsletter sequences, re-targeting"), prio: "P2" },
               { n: t("PIM-System","PIM System"), d: t("→ Siehe KI-Projekte #3. Fundament für alles Digitale.","→ See AI Projects #3. Foundation for everything digital."), prio: "P1" },
-              { n: "Content Marketing", d: t("Blog, YouTube technische Artikel, SEO-Content","Blog, YouTube technical articles, SEO content"), prio: "P2" },
             ].map((p, i) => (
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
                 <Tag color={p.prio === "P1" ? C.red : C.copper}>{p.prio}</Tag>
@@ -1840,7 +1947,7 @@ function RiskPage({ lang }) {
           {[
             { r: t("Schlüsselpersonen-Risiko (akut: Marcel seit März abwesend)","Key personnel risk (acute: Marcel absent since March)"), a: [t("Sebastian übernimmt Key Accounts, Alex O. Innendienst","Sebastian takes over key accounts, Alex O. inside sales"), t("Alle offenen Angebote und Leads sauber dokumentieren","Document all open quotes and leads properly"), t("Alex O. Kompetenz aufbauen (E-Technik-Schulung Q2)","Build Alex O. competence (e-tech training Q2)"), t("Vertretungsregelungen für alle Schlüsselrollen fixieren","Fix backup arrangements for all key roles")] },
             { r: t("Maschinenbaukrise / China-Druck","Machinery crisis / China pressure"), a: [t("Robotik-Einstieg als Diversifikation (10 T€)","Robotics entry as diversification (10 k€)"), t("AT/CH/NL Expansion reduziert DE-Abhängigkeit","AT/CH/NL expansion reduces DE dependency"), t("Custom-Kompetenz als Differenzierer stärken","Strengthen custom competence as differentiator")] },
-            { r: t("Lieferengpässe","Supply shortages"), a: [t("Dual Sourcing für Top-5 Zulieferer (Thoma, Q3)","Dual sourcing for top 5 suppliers (Thoma, Q3)"), t("Sicherheitsbestand Standardprodukte aufbauen (15 T€)","Build safety stock standard products (15 k€)"), t("Alternative Lieferanten qualifizieren","Qualify alternative suppliers")] },
+            { r: t("Lieferengpässe","Supply shortages"), a: [t("Dual Sourcing für Top-5 Zulieferer (Thomas, Q3)","Dual sourcing for top 5 suppliers (Thomas, Q3)"), t("Sicherheitsbestand Standardprodukte aufbauen (15 T€)","Build safety stock standard products (15 k€)"), t("Alternative Lieferanten qualifizieren","Qualify alternative suppliers")] },
           ].map((item, i) => (
             <div key={i} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: i < 2 ? `1px solid ${C.borderLight}` : "none" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 4 }}>{i + 1}. {item.r}</div>
@@ -1883,12 +1990,12 @@ function RoadmapPage({ lang }) {
       { t: t("Vertriebsmaterial EN — vorhanden ✓","Sales material EN — available ✓"), dl: t("erledigt","completed"), who: "Martin", done: true },
       { t: t("SEO international vorbereiten","Prepare international SEO"), dl: "31.03.", who: "Martin", done: false },
       { t: t("KI-Auftragsabwicklung Phase 1 vorbereiten","Prepare AI order processing phase 1"), dl: "31.03.", who: "Sebastian/Martin", done: false },
-      { t: t("Prozessdokumentation Einkauf","Purchasing process documentation"), dl: t("laufend","ongoing"), who: "Thoma", done: false },
+      { t: t("Prozessdokumentation Einkauf","Purchasing process documentation"), dl: t("laufend","ongoing"), who: "Thomas", done: false },
     ]},
     { q: "Q2 2026", title: t("Start & Aktivierung (ab April)","Launch & Activation (from April)"), color: C.copper, icon: "🚀", items: [
       { t: t("Kurzarbeit beenden","End short-time work"), dl: "30.04.", who: "GF", done: false },
       { t: t("Budgetfreigabe alle Maßnahmen","Budget approval all measures"), dl: t("Mitte Apr","Mid Apr"), who: "GF/Sebastian", done: false },
-      { t: t("ISO-Zertifizierung abschließen","Complete ISO certification"), dl: t("Mai","May"), who: "Thoma", done: false },
+      { t: t("ISO-Zertifizierung abschließen","Complete ISO certification"), dl: t("Mai","May"), who: "Thomas", done: false },
       { t: t("Österreich-Pilot Kaltakquise","Austria pilot cold calling"), dl: t("Mai/Jun","May/Jun"), who: "Sebastian/Alex O.", done: false },
       { t: t("KI-Chatbot Homepage live","AI chatbot homepage live"), dl: "30.05.", who: "Martin", done: false },
       { t: t("Muster-Roboter beschaffen","Procure sample robots"), dl: t("Mai","May"), who: "Sebastian", done: false },
@@ -1896,18 +2003,15 @@ function RoadmapPage({ lang }) {
     { q: "Q3 2026", title: t("Skalieren & Ausbauen","Scale & Expand"), color: C.teal, icon: "📈", items: [
       { t: t("Shop auf 500+ Artikel erweitern","Expand shop to 500+ articles"), dl: "31.10.", who: "Martin", done: false },
       { t: t("Vertriebspartner NL/BE finden","Find sales partners NL/BE"), dl: "31.10.", who: "Marcel/Sebastian", done: false },
-      { t: t("Content-Marketing starten","Start content marketing"), dl: t("laufend","ongoing"), who: "Martin", done: false },
       { t: t("Produktkonfigurator v1 live","Product configurator v1 live"), dl: "31.10.", who: "Martin/Sebastian", done: false },
       { t: t("KI-Auftragsabwicklung Phase 2","AI order processing phase 2"), dl: "Start Q3", who: "Sebastian", done: false },
       { t: t("Lagerbestand Standardprodukte aufgebaut","Standard product stock built up"), dl: "30.09.", who: "Alex G.", done: false },
-      { t: t("Motek Stuttgart vorbereiten","Prepare Motek Stuttgart"), dl: "Sep", who: "Sebastian/Marcel", done: false },
     ]},
     { q: "Q4 2026", title: t("Konsolidieren & Planen","Consolidate & Plan"), color: C.navy, icon: "🎯", items: [
       { t: t("Skalierung AT/CH bewerten","Evaluate AT/CH scaling"), dl: t("Dez","Dec"), who: "Sebastian", done: false },
-      { t: t("Dual Sourcing Lieferanten","Dual sourcing suppliers"), dl: "31.10.", who: "Thoma", done: false },
+      { t: t("Dual Sourcing Lieferanten","Dual sourcing suppliers"), dl: "31.10.", who: "Thomas", done: false },
       { t: "Marketing Automation live", dl: "31.10.", who: "Martin", done: false },
       { t: t("Jahresplanung 2027 erstellen","Create 2027 annual plan"), dl: t("Dez","Dec"), who: t("Alle","All"), done: false },
-      { t: t("Motek-Nachbereitung & Leads","Motek follow-up & leads"), dl: "Nov", who: "Sebastian/Marcel", done: false },
       { t: t("Automatica 2027 Planung starten","Start Automatica 2027 planning"), dl: t("Dez","Dec"), who: "Sebastian", done: false },
     ]},
   ];
@@ -1993,8 +2097,8 @@ function KPIPage({ lang }) {
             [<Tag color={C.blue}>{t("Kunden","Customers")}</Tag>, "Follow-up < 48h", <strong>100%</strong>, t("Wöchentlich","Weekly"), "Alex O.", <Tag color={C.amber}>Tracking</Tag>],
             [<Tag color={C.blue}>{t("Kunden","Customers")}</Tag>, t("Shop-Artikel","Shop Articles"), <strong>{t("500+ Artikel","500+ Articles")}</strong>, t("Monatlich","Monthly"), "Martin", <Tag color={C.amber}>{t("Aufbau","Build-up")}</Tag>],
             [<Tag color={C.teal}>{t("Prozesse","Processes")}</Tag>, t("Admin-Stunden gespart","Admin Hours Saved"), <strong>{t("500h/Jahr","500h/Year")}</strong>, t("Quartalsweise","Quarterly"), "Sebastian", <Tag color={C.red}>Start Q1</Tag>],
-            [<Tag color={C.teal}>{t("Prozesse","Processes")}</Tag>, t("Materialquote","Material Ratio"), <strong>≤ 38%</strong>, t("Monatlich","Monthly"), "Thoma", <Tag color={C.green}>39,4%</Tag>],
-            [<Tag color={C.teal}>{t("Prozesse","Processes")}</Tag>, t("Liefertreue","Delivery Reliability"), <strong>≥ 95%</strong>, t("Monatlich","Monthly"), "Thoma", <Tag color={C.amber}>{t("Messen!","Measure!")}</Tag>],
+            [<Tag color={C.teal}>{t("Prozesse","Processes")}</Tag>, t("Materialquote","Material Ratio"), <strong>≤ 38%</strong>, t("Monatlich","Monthly"), "Thomas", <Tag color={C.green}>39,4%</Tag>],
+            [<Tag color={C.teal}>{t("Prozesse","Processes")}</Tag>, t("Liefertreue","Delivery Reliability"), <strong>≥ 95%</strong>, t("Monatlich","Monthly"), "Thomas", <Tag color={C.amber}>{t("Messen!","Measure!")}</Tag>],
             [<Tag color={C.teal}>{t("Prozesse","Processes")}</Tag>, "Conversion Rate Shop", <strong>≥ 3,5%</strong>, t("Monatlich","Monthly"), "Martin", <Tag color={C.amber}>Baseline</Tag>],
             [<Tag color={C.green}>{t("Lernen","Learning")}</Tag>, "Website-Traffic", <strong>5.000/Mo.</strong>, t("Monatlich","Monthly"), "Martin", <Tag color={C.amber}>{t("Messen!","Measure!")}</Tag>],
             [<Tag color={C.green}>{t("Lernen","Learning")}</Tag>, "Qual. Leads", <strong>≥ 20/Mo.</strong>, t("Monatlich","Monthly"), "Martin", <Tag color={C.red}>{t("Aufbau","Build-up")}</Tag>],
@@ -2048,12 +2152,12 @@ function KPIPage({ lang }) {
           {[
             { t: t("Robotik-Zielkunden identifizieren","Identify robotics target customers"), d: t("Top-20 Integratoren und Sondermaschinenbauer in DACH","Top 20 integrators and special machinery builders in DACH"), who: "Sebastian" },
             { t: t("Produktschulungen planen","Plan product trainings"), d: t("Robotik, Servomotoren, neue Warengruppen für das Team","Robotics, servo motors, new product groups for the team"), who: "Sebastian" },
-            { t: t("ISO-Vorbereitung checken","Check ISO preparation"), d: t("Termin mit Thoma: Was fehlt noch für Mai?","Meeting with Thoma: What is still missing for May?"), who: "Sebastian/Thoma" },
+            { t: t("ISO-Vorbereitung checken","Check ISO preparation"), d: t("Termin mit Thomas: Was fehlt noch für Mai?","Meeting with Thomas: What is still missing for May?"), who: "Sebastian/Thomas" },
             { t: t("Alex O. Weiterbildungsplan","Alex O. training plan"), d: t("E-Technik-Kurs recherchieren, AfA-Förderung prüfen","Research e-tech course, check employment agency funding"), who: "Sebastian" },
             { t: t("KI-Auftragsabwicklung: Anforderungen","AI order processing: requirements"), d: t("Prozess dokumentieren, Tool-Auswahl starten","Document process, start tool selection"), who: "Sebastian/Martin" },
             { t: t("Shop-Erweiterung planen","Plan shop expansion"), d: t("Nächste 100 Artikel für Online-Shop identifizieren","Identify next 100 articles for online shop"), who: "Martin" },
             { t: t("Content-Plan erstellen","Create content plan"), d: t("Blog-Themen, YouTube-Ideen für technische Artikel","Blog topics, YouTube ideas for technical articles"), who: "Martin" },
-            { t: t("Nahost: Lieferanten-Check","Middle East: supplier check"), d: t("Betroffene Zulieferer identifizieren, EU-Alternativen prüfen","Identify affected suppliers, check EU alternatives"), who: "Thoma" },
+            { t: t("Nahost: Lieferanten-Check","Middle East: supplier check"), d: t("Betroffene Zulieferer identifizieren, EU-Alternativen prüfen","Identify affected suppliers, check EU alternatives"), who: "Thomas" },
           ].map((a, i) => (
             <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
               <div style={{
@@ -2092,9 +2196,9 @@ function KPIPage({ lang }) {
                 { kpi: t("Shop-Artikel","Shop Articles"), ist: "~250", zielQ2: "320", zielQ4: "450", zielDez: "500+", action: t("30–40 neue Artikel/Monat","30–40 new articles/month"), who: "Martin", review: t("Monatlich","Monthly"), color: C.teal },
                 { kpi: "Website-Traffic", ist: "~2.500/Mo", zielQ2: "3.500", zielQ4: "4.500", zielDez: "5.000/Mo", action: "SEO, Blog, Google Ads, LinkedIn", who: "Martin", review: t("Monatlich","Monthly"), color: C.green },
                 { kpi: "Qual. Leads", ist: "~5/Mo", zielQ2: "10/Mo", zielQ4: "15/Mo", zielDez: "≥ 20/Mo", action: t("Chatbot, Ads, Konfigurator","Chatbot, ads, configurator"), who: "Martin", review: t("Monatlich","Monthly"), color: C.green },
-                { kpi: t("Robotik-Kunden","Robotics Customers"), ist: "0", zielQ2: "1", zielQ4: "3", zielDez: "≥ 5", action: t("Muster, Zielkunden, Motek","Samples, target customers, Motek"), who: "Sebastian", review: t("Quartalsw.","Quarterly"), color: C.copper },
+                { kpi: t("Robotik-Kunden","Robotics Customers"), ist: "0", zielQ2: "1", zielQ4: "3", zielDez: "≥ 5", action: t("Muster, Zielkunden, Direktansprache","Samples, target customers, direct outreach"), who: "Sebastian", review: t("Quartalsw.","Quarterly"), color: C.copper },
                 { kpi: t("KI-Stunden gespart","AI Hours Saved"), ist: "0h", zielQ2: "80h", zielQ4: "350h", zielDez: "500h", action: "Phase 1 (Apr), Phase 2 (Q3)", who: "Sebastian", review: t("Quartalsw.","Quarterly"), color: C.teal },
-                { kpi: t("Materialquote","Material Ratio"), ist: "39,4%", zielQ2: "38,5%", zielQ4: "37,5%", zielDez: "≤ 37%", action: t("Dual Sourcing, EU-Lieferanten","Dual sourcing, EU suppliers"), who: "Thoma", review: t("Monatlich","Monthly"), color: C.amber },
+                { kpi: t("Materialquote","Material Ratio"), ist: "39,4%", zielQ2: "38,5%", zielQ4: "37,5%", zielDez: "≤ 37%", action: t("Dual Sourcing, EU-Lieferanten","Dual sourcing, EU suppliers"), who: "Thomas", review: t("Monatlich","Monthly"), color: C.amber },
                 { kpi: "Follow-up < 48h", ist: "~70%", zielQ2: "90%", zielQ4: "95%", zielDez: "100%", action: t("Prozess + Tracking","Process + tracking"), who: "Alex O.", review: t("Wöchentlich","Weekly"), color: C.blue },
               ].map((r, i) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
@@ -2120,8 +2224,8 @@ function KPIPage({ lang }) {
           {[
             { month: t("April","April"), events: [t("Mitte Apr: Budgetfreigabe","Mid Apr: Budget approval"), t("01.04.: 1. Monthly Review","01.04: 1st Monthly Review"), t("Wöchentlich: Sales Mo 9h","Weekly: Sales Mon 9am"), t("KPI-Baseline festlegen","Set KPI baseline")] },
             { month: t("Mai–Juni","May–June"), events: ["01.05./01.06.: Monthly Review", t("ISO-Review (Mai)","ISO review (May)"), t("Ende Q2: Strategy Review #1","End Q2: Strategy Review #1"), t("KI Phase 1 Check","AI Phase 1 Check")] },
-            { month: t("Jul–Sep","Jul–Sep"), events: [t("Monthly Reviews (1. d.M.)","Monthly reviews (1st of month)"), t("Ende Q3: Strategy Review #2","End Q3: Strategy Review #2"), t("Motek-Vorbereitung (Sep)","Motek preparation (Sep)"), t("AT-Pilot Zwischenbilanz","AT pilot interim review")] },
-            { month: t("Okt–Dez","Oct–Dec"), events: [t("Motek Nachbereitung (Nov)","Motek follow-up (Nov)"), t("Ende Q4: Strategy Review #3","End Q4: Strategy Review #3"), t("Automatica '27 Planung","Automatica '27 planning"), t("Jahresplanung 2027 (Dez)","Annual planning 2027 (Dec)")] },
+            { month: t("Jul–Sep","Jul–Sep"), events: [t("Monthly Reviews (1. d.M.)","Monthly reviews (1st of month)"), t("Ende Q3: Strategy Review #2","End Q3: Strategy Review #2"), t("AT-Pilot Zwischenbilanz","AT pilot interim review"), t("Webshop Review","Webshop review")] },
+            { month: t("Okt–Dez","Oct–Dec"), events: [t("Ende Q4: Strategy Review #3","End Q4: Strategy Review #3"), t("Automatica '27 Planung","Automatica '27 planning"), t("Jahresplanung 2027 (Dez)","Annual planning 2027 (Dec)"), t("Robotik-Pipeline Review","Robotics pipeline review")] },
           ].map((q, i) => (
             <div key={i} style={{ padding: 12, border: `1px solid ${C.border}`, borderRadius: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.copper, marginBottom: 8 }}>{q.month}</div>
