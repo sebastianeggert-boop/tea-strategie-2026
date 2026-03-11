@@ -15,6 +15,7 @@ body{font-family:"DM Sans","Segoe UI",sans-serif;background:#0F2137}
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="root"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0F2137;color:#C87941;font-family:Georgia,serif;font-size:20px;flex-direction:column;gap:16px"><div>TEA 2026</div><div style="font-size:12px;color:rgba(255,255,255,0.3);font-family:sans-serif">Dashboard wird geladen...</div></div></div>
@@ -22,219 +23,193 @@ body{font-family:"DM Sans","Segoe UI",sans-serif;background:#0F2137}
 <script type="text/babel">
 
 // ═══════════════════════════════════════
-// RECHARTS CSS SHIM — lightweight chart replacements
+// CHART.JS WRAPPERS — production-grade chart rendering
 // ═══════════════════════════════════════
 const ResponsiveContainer = ({ children, width, height }) => (
   <div style={{ width: width || "100%", height: height || 200, position: "relative" }}>{children}</div>
 );
 
-// CSS absolute-positioned Bar Chart (no SVG, no flex %, no distortion)
-const BarChart = ({ data, children }) => {
-  const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
-  const allVals = data.flatMap(d => bars.map(b => Math.abs(d[b.props.dataKey] || 0)));
-  const rawMax = Math.max(...allVals);
-  const niceMax = Math.ceil(rawMax / 50) * 50 || rawMax || 100;
-  const yTicks = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
-  const n = data.length;
-  const groupW = 100 / n;
-  const barW = groupW * 0.6 / Math.max(bars.length, 1);
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ width: 36, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
-          {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
-        </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          {data.map((d, di) =>
-            bars.map((b, bi) => {
-              const v = d[b.props.dataKey] || 0;
-              const clr = b.props.fill || "#3B82F6";
-              const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
-              const col = cells[di] ? cells[di].props.fill : clr;
-              const pct = niceMax > 0 ? (Math.abs(v)/niceMax)*100 : 0;
-              const left = di*groupW + groupW*0.2 + bi*barW;
-              return <div key={di+"-"+bi} style={{ position: "absolute", bottom: 0, left: left+"%", width: barW+"%", height: pct+"%", background: col, opacity: b.props.opacity||0.85, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />;
-            })
-          )}
-        </div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 36, padding: "4px 0" }}>
-        {data.map((d, i) => <span key={i} style={{ fontSize: 7, color: "#94A3B8", whiteSpace: "nowrap" }}>{d[Object.keys(d)[0]]}</span>)}
-      </div>
-      {bars.length > 1 && <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-        {bars.map((b,i) => <span key={i} style={{fontSize:9,color:b.props.fill||"#3B82F6"}}>{"\u25A0"} {b.props.name||b.props.dataKey}</span>)}
-      </div>}
-    </div>
-  );
-};
-
-const Bar = ({ dataKey, fill, name, radius, opacity, children }) => null;
-const Cell = ({ fill }) => null;
-
-// Pixel-accurate SVG line overlay (measures container via ref)
-const SvgLineOverlay = ({ seriesList }) => {
-  const ref = React.useRef(null);
-  const [dim, setDim] = React.useState(null);
+// Chart.js React hook — creates/destroys Chart instance
+const useChartJS = (ref, config) => {
+  const inst = React.useRef(null);
   React.useEffect(() => {
-    const measure = () => { if (ref.current) { const r = ref.current.getBoundingClientRect(); if (r.width > 0) setDim({ w: r.width, h: r.height }); } };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  return <div ref={ref} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-    {dim && <svg width={dim.w} height={dim.h} style={{ position: "absolute", inset: 0 }}>
-      {seriesList.map((s, si) => {
-        const px = s.pts.map(p => ({ x: (p.xPct / 100) * dim.w, y: dim.h - (p.yPct / 100) * dim.h }));
-        return <React.Fragment key={si}>
-          {s.fill && <path d={"M" + px.map(p => p.x+","+p.y).join("L") + "L"+px[px.length-1].x+","+dim.h+"L"+px[0].x+","+dim.h+"Z"} fill={s.color} opacity={0.12} />}
-          <polyline points={px.map(p => p.x+","+p.y).join(" ")} fill="none" stroke={s.color} strokeWidth={s.strokeWidth || 2} strokeLinejoin="round" strokeLinecap="round" />
-          {s.dots !== false && px.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3} fill={s.color} />)}
-        </React.Fragment>;
-      })}
-    </svg>}
-  </div>;
+    if (!ref.current) return;
+    if (inst.current) inst.current.destroy();
+    inst.current = new Chart(ref.current, config);
+    return () => { if (inst.current) { inst.current.destroy(); inst.current = null; } };
+  });
 };
 
-// Line Chart with pixel-accurate SVG lines
+// Bar Chart
+const BarChart = ({ data, children }) => {
+  const ref = React.useRef(null);
+  const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  useChartJS(ref, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: bars.map(b => {
+        const cells = React.Children.toArray(b.props.children || []).filter(c => c && c.type === Cell);
+        return {
+          label: b.props.name || b.props.dataKey,
+          data: data.map(d => d[b.props.dataKey] || 0),
+          backgroundColor: cells.length ? data.map((_, i) => (cells[i] && cells[i].props.fill) || b.props.fill || '#3B82F6') : (b.props.fill || '#3B82F6'),
+          borderRadius: 4,
+          barPercentage: 0.7,
+        };
+      }),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { display: bars.length > 1, labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+      },
+    },
+  });
+  return <canvas ref={ref} />;
+};
+
+const Bar = function(props) { return null; };
+const Cell = function(props) { return null; };
+
+// Line Chart
 const LineChart = ({ data, children }) => {
+  const ref = React.useRef(null);
   const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
-  if (!data || !data.length || !lines.length) return <div style={{height:"100%"}} />;
-  const allVals = lines.flatMap(l => data.map(d => d[l.props.dataKey]).filter(v => v != null));
-  const min = Math.min(...allVals) * 0.9;
-  const max = Math.max(...allVals) * 1.1;
-  const range = max - min || 1;
-  const yTickCount = 5;
-  const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(min + (range * i / (yTickCount - 1))));
-  const toX = (i) => data.length > 1 ? (i / (data.length - 1)) * 100 : 50;
-  const toY = (v) => ((v - min) / range) * 100;
-  const seriesList = lines.map(line => ({
-    color: "#" + (line.props.stroke || "3B82F6").replace("#",""),
-    strokeWidth: line.props.strokeWidth || 2,
-    pts: data.map((d, i) => ({ xPct: toX(i), yPct: toY(d[line.props.dataKey] || 0) })),
-  }));
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ width: 38, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
-          {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
-        </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          <SvgLineOverlay seriesList={seriesList} />
-        </div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", marginLeft: 38 }}>
-        {data.filter((d,i) => i % Math.ceil(data.length / 6) === 0 || i === data.length-1).map((d, i) => (
-          <span key={i} style={{ fontSize: 8, color: "#94A3B8" }}>{d[Object.keys(d)[0]]}</span>
-        ))}
-      </div>
-      {lines.length > 1 && <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-        {lines.map((l,i) => <span key={i} style={{fontSize:9,color:"#"+((l.props.stroke||"3B82F6").replace("#",""))}}>● {l.props.name||l.props.dataKey}</span>)}
-      </div>}
-    </div>
-  );
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  useChartJS(ref, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: lines.map(l => ({
+        label: l.props.name || l.props.dataKey,
+        data: data.map(d => d[l.props.dataKey]),
+        borderColor: l.props.stroke || '#3B82F6',
+        backgroundColor: 'transparent',
+        borderWidth: l.props.strokeWidth || 2,
+        borderDash: l.props.strokeDasharray ? [5, 5] : [],
+        pointRadius: 3,
+        pointBackgroundColor: l.props.stroke || '#3B82F6',
+        tension: 0.3,
+        fill: false,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+        y: { ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+      },
+    },
+  });
+  return <canvas ref={ref} />;
 };
 
-const Line = ({ dataKey, stroke, strokeWidth, name, dot, strokeDasharray }) => null;
+const Line = function(props) { return null; };
 
-// Area Chart with pixel-accurate SVG lines + filled areas
+// Area Chart
 const AreaChart = ({ data, children }) => {
+  const ref = React.useRef(null);
   const areas = React.Children.toArray(children).filter(c => c && c.type === Area);
-  if (!data || !data.length) return <div style={{height:"100%"}} />;
-  const allVals = areas.flatMap(a => data.map(d => d[a.props.dataKey]).filter(v => v != null));
-  const min = Math.min(...allVals) * 0.85;
-  const max = Math.max(...allVals) * 1.1;
-  const range = max - min || 1;
-  const yTickCount = 5;
-  const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(min + (range * i / (yTickCount - 1))));
-  const toX = (i) => data.length > 1 ? (i / (data.length - 1)) * 100 : 50;
-  const toY = (v) => ((v - min) / range) * 100;
-  const seriesList = areas.map(area => ({
-    color: "#" + (area.props.stroke || "3B82F6").replace("#",""),
-    strokeWidth: area.props.strokeWidth || 2,
-    fill: true, dots: false,
-    pts: data.map((d, i) => ({ xPct: toX(i), yPct: toY(d[area.props.dataKey] || 0) })),
-  }));
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ width: 38, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
-          {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
-        </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          <SvgLineOverlay seriesList={seriesList} />
-        </div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", marginLeft: 38 }}>
-        {data.filter((d,i) => i % Math.ceil(data.length / 6) === 0 || i === data.length-1).map((d, i) => (
-          <span key={i} style={{ fontSize: 8, color: "#94A3B8" }}>{d[Object.keys(d)[0]]}</span>
-        ))}
-      </div>
-      {areas.length > 1 && <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginTop:2}}>
-        {areas.map((a,i) => <span key={i} style={{fontSize:9,color:"#"+((a.props.stroke||"3B82F6").replace("#",""))}}>● {a.props.name||a.props.dataKey}</span>)}
-      </div>}
-    </div>
-  );
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  useChartJS(ref, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: areas.map(a => ({
+        label: a.props.name || a.props.dataKey,
+        data: data.map(d => d[a.props.dataKey]),
+        borderColor: a.props.stroke || '#3B82F6',
+        backgroundColor: a.props.fill || ((a.props.stroke || '#3B82F6') + '25'),
+        borderWidth: a.props.strokeWidth || 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+        y: { ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+      },
+    },
+  });
+  return <canvas ref={ref} />;
 };
 
-const Area = ({ dataKey, stroke, fill, strokeWidth, name, type }) => null;
+const Area = function(props) { return null; };
 
-// CSS Composed Chart — bars as absolute divs + lines as CSS segments
+// Composed Chart (bars + lines with dual y-axis)
 const ComposedChart = ({ data, children }) => {
+  const ref = React.useRef(null);
   const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
   const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
-  const allBarVals = data.flatMap(d => bars.map(b => Math.abs(d[b.props.dataKey] || 0)));
-  const allLineVals = data.flatMap(d => lines.map(l => Math.abs(d[l.props.dataKey] || 0)));
-  const allVals = [...allBarVals, ...allLineVals];
-  const rawMax = Math.max(...allVals);
-  const niceMax = Math.ceil(rawMax / 50) * 50 || rawMax || 100;
-  const yTicks = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
-  const n = data.length;
-  const groupW = 100 / n;
-  const barW = groupW * 0.6 / Math.max(bars.length, 1);
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ width: 36, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
-          {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
-        </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          {data.map((d, di) =>
-            bars.map((b, bi) => {
-              const v = d[b.props.dataKey] || 0;
-              const clr = b.props.fill || "#3B82F6";
-              const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
-              const col = cells[di] ? cells[di].props.fill : clr;
-              const pct = niceMax > 0 ? (Math.abs(v)/niceMax)*100 : 0;
-              const left = di*groupW + groupW*0.2 + bi*barW;
-              return <div key={di+"-"+bi} style={{ position: "absolute", bottom: 0, left: left+"%", width: barW+"%", height: pct+"%", background: col, opacity: b.props.opacity||0.85, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />;
-            })
-          )}
-          <SvgLineOverlay seriesList={lines.map(l => ({
-            color: l.props.stroke || "#EF4444",
-            strokeWidth: l.props.strokeWidth || 2,
-            pts: data.map((d, di) => ({
-              xPct: di * groupW + groupW * 0.5,
-              yPct: niceMax > 0 ? (d[l.props.dataKey] || 0) / niceMax * 100 : 0
-            })),
-          }))} />
-        </div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 36, padding: "4px 0" }}>
-        {data.map((d, i) => <span key={i} style={{ fontSize: 7, color: "#94A3B8", whiteSpace: "nowrap" }}>{d[Object.keys(d)[0]]}</span>)}
-      </div>
-      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-        {bars.map((b,i) => <span key={i} style={{fontSize:9,color:b.props.fill||"#3B82F6"}}>{"\u25A0"} {b.props.name||b.props.dataKey}</span>)}
-        {lines.map((l,i) => <span key={"ll-"+i} style={{fontSize:9,color:l.props.stroke||"#EF4444"}}>{"\u2014"} {l.props.name||l.props.dataKey}</span>)}
-      </div>
-    </div>
-  );
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  const hasLines = lines.length > 0;
+  const scales = {
+    x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+    y: { position: 'left', beginAtZero: true, ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+  };
+  if (hasLines) {
+    scales.y1 = { position: 'right', ticks: { font: { size: 9 } }, grid: { drawOnChartArea: false } };
+  }
+  useChartJS(ref, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: [
+        ...bars.map(b => {
+          const cells = React.Children.toArray(b.props.children || []).filter(c => c && c.type === Cell);
+          return {
+            type: 'bar',
+            label: b.props.name || b.props.dataKey,
+            data: data.map(d => d[b.props.dataKey] || 0),
+            backgroundColor: cells.length ? data.map((_, i) => (cells[i] && cells[i].props.fill) || b.props.fill || '#3B82F6') : (b.props.fill || '#3B82F6'),
+            borderRadius: 4,
+            barPercentage: 0.7,
+            yAxisID: 'y',
+            order: 2,
+          };
+        }),
+        ...lines.map(l => ({
+          type: 'line',
+          label: l.props.name || l.props.dataKey,
+          data: data.map(d => d[l.props.dataKey]),
+          borderColor: l.props.stroke || '#EF4444',
+          backgroundColor: 'transparent',
+          borderWidth: l.props.strokeWidth || 2,
+          pointRadius: 3,
+          pointBackgroundColor: l.props.stroke || '#EF4444',
+          tension: 0.3,
+          fill: false,
+          yAxisID: hasLines ? 'y1' : 'y',
+          order: 1,
+        })),
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: scales,
+    },
+  });
+  return <canvas ref={ref} />;
 };
 
-// Pie Chart
 const PieChart = ({ children }) => {
   const pie = React.Children.toArray(children).find(c => c && c.type === Pie);
   if (!pie) return null;
