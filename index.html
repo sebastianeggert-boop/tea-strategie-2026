@@ -28,40 +28,38 @@ const ResponsiveContainer = ({ children, width, height }) => (
   <div style={{ width: width || "100%", height: height || 200, position: "relative" }}>{children}</div>
 );
 
-// SVG-based Bar Chart with Y-axis (CSS % heights break in nested flex)
+// CSS absolute-positioned Bar Chart (no SVG, no flex %, no distortion)
 const BarChart = ({ data, children }) => {
   const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
   const allVals = data.flatMap(d => bars.map(b => Math.abs(d[b.props.dataKey] || 0)));
   const rawMax = Math.max(...allVals);
   const niceMax = Math.ceil(rawMax / 50) * 50 || rawMax || 100;
   const yTicks = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
-  const W = 100, H = 100;
-  const gw = W / data.length;
-  const bw = gw * 0.6 / Math.max(bars.length, 1);
+  const n = data.length;
+  const groupW = 100 / n;
+  const barW = groupW * 0.6 / Math.max(bars.length, 1);
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex" }}>
-        <div style={{ width: 32, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <div style={{ width: 36, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
           {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
         </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
+        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
           {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          <svg viewBox={"0 0 "+W+" "+H} style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
-            {data.map((d, di) =>
-              bars.map((b, bi) => {
-                const v = d[b.props.dataKey] || 0;
-                const clr = b.props.fill || "#3B82F6";
-                const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
-                const col = cells[di] ? cells[di].props.fill : clr;
-                const bh = niceMax > 0 ? (Math.abs(v)/niceMax)*H : 0;
-                const x = di*gw + gw*0.2 + bi*bw;
-                return <rect key={di+"-"+bi} x={x} y={H-bh} width={bw} height={bh} fill={col} opacity={b.props.opacity||0.85} rx={0.3} />;
-              })
-            )}
-          </svg>
+          {data.map((d, di) =>
+            bars.map((b, bi) => {
+              const v = d[b.props.dataKey] || 0;
+              const clr = b.props.fill || "#3B82F6";
+              const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
+              const col = cells[di] ? cells[di].props.fill : clr;
+              const pct = niceMax > 0 ? (Math.abs(v)/niceMax)*100 : 0;
+              const left = di*groupW + groupW*0.2 + bi*barW;
+              return <div key={di+"-"+bi} style={{ position: "absolute", bottom: 0, left: left+"%", width: barW+"%", height: pct+"%", background: col, opacity: b.props.opacity||0.85, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />;
+            })
+          )}
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 32, padding: "4px 0" }}>
+      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 36, padding: "4px 0" }}>
         {data.map((d, i) => <span key={i} style={{ fontSize: 7, color: "#94A3B8", whiteSpace: "nowrap" }}>{d[Object.keys(d)[0]]}</span>)}
       </div>
       {bars.length > 1 && <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
@@ -74,7 +72,7 @@ const BarChart = ({ data, children }) => {
 const Bar = ({ dataKey, fill, name, radius, opacity, children }) => null;
 const Cell = ({ fill }) => null;
 
-// Simple Line Chart with Y-axis labels
+// CSS Line Chart — dots as absolute-positioned divs, lines as SVG overlay
 const LineChart = ({ data, children }) => {
   const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
   if (!data || !data.length || !lines.length) return <div style={{height:"100%"}} />;
@@ -82,29 +80,32 @@ const LineChart = ({ data, children }) => {
   const min = Math.min(...allVals) * 0.9;
   const max = Math.max(...allVals) * 1.1;
   const range = max - min || 1;
-  const w = 100; const h = 100;
   const yTickCount = 5;
   const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(min + (range * i / (yTickCount - 1))));
+  const toX = (i) => data.length > 1 ? (i / (data.length - 1)) * 100 : 50;
+  const toY = (v) => ((v - min) / range) * 100;
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex" }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <div style={{ width: 38, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
           {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
         </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f * 100) + "%", borderTop: "1px dashed #F1F5F9" }} />)}
-          <svg viewBox={"0 0 " + w + " " + h} style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
-            {lines.map((line, li) => {
-              const points = data.map((d, i) => {
-                const v = d[line.props.dataKey];
-                if (v == null) return null;
-                const x = (i / (data.length - 1)) * w;
-                const y = h - ((v - min) / range) * h;
-                return x + "," + y;
-              }).filter(Boolean);
-              return <polyline key={li} points={points.join(" ")} fill="none" stroke={"#" + (line.props.stroke || "3B82F6").replace("#","")} strokeWidth={line.props.strokeWidth || 1.5} strokeDasharray={line.props.strokeDasharray || ""} vectorEffect="non-scaling-stroke" />;
-            })}
-          </svg>
+        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
+          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
+          {lines.map((line, li) => {
+            const col = "#" + (line.props.stroke || "3B82F6").replace("#","");
+            const pts = data.map((d, i) => ({ x: toX(i), y: toY(d[line.props.dataKey] || 0) }));
+            return <React.Fragment key={li}>
+              {pts.map((p, pi) => pi < pts.length - 1 ? (() => {
+                const p2 = pts[pi+1];
+                const dx = p2.x - p.x, dy = p2.y - p.y;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+                return <div key={pi} style={{ position: "absolute", bottom: p.y+"%", left: p.x+"%", width: len+"%", height: 2, background: col, transformOrigin: "0 50%", transform: "rotate("+angle+"deg)" }} />;
+              })() : null)}
+              {pts.map((p, pi) => <div key={"d"+pi} style={{ position: "absolute", bottom: (p.y-0.8)+"%", left: (p.x-0.4)+"%", width: 5, height: 5, borderRadius: "50%", background: col }} />)}
+            </React.Fragment>;
+          })}
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", marginLeft: 38 }}>
@@ -121,7 +122,7 @@ const LineChart = ({ data, children }) => {
 
 const Line = ({ dataKey, stroke, strokeWidth, name, dot, strokeDasharray }) => null;
 
-// Simple Area Chart with Y-axis labels
+// CSS Area Chart — filled polygons via clip-path, lines via CSS segments
 const AreaChart = ({ data, children }) => {
   const areas = React.Children.toArray(children).filter(c => c && c.type === Area);
   if (!data || !data.length) return <div style={{height:"100%"}} />;
@@ -129,32 +130,33 @@ const AreaChart = ({ data, children }) => {
   const min = Math.min(...allVals) * 0.85;
   const max = Math.max(...allVals) * 1.1;
   const range = max - min || 1;
-  const w = 100; const h = 100;
   const yTickCount = 5;
   const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(min + (range * i / (yTickCount - 1))));
+  const toX = (i) => data.length > 1 ? (i / (data.length - 1)) * 100 : 50;
+  const toY = (v) => ((v - min) / range) * 100;
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex" }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <div style={{ width: 38, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
           {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
         </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
-          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f * 100) + "%", borderTop: "1px dashed #F1F5F9" }} />)}
-          <svg viewBox={"0 0 " + w + " " + h} style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
-            {areas.map((area, ai) => {
-              const pts = data.map((d, i) => {
-                const v = d[area.props.dataKey];
-                if (v == null) return null;
-                return { x: (i / (data.length - 1)) * w, y: h - ((v - min) / range) * h };
-              }).filter(Boolean);
-              const pathD = "M" + pts.map(p => p.x+","+p.y).join("L") + "L"+pts[pts.length-1].x+","+h+"L"+pts[0].x+","+h+"Z";
-              const col = (area.props.stroke || "3B82F6").replace("#","");
-              return <React.Fragment key={ai}>
-                <path d={pathD} fill={"#"+col} opacity={0.1} />
-                <polyline points={pts.map(p=>p.x+","+p.y).join(" ")} fill="none" stroke={"#"+col} strokeWidth={area.props.strokeWidth || 1.5} vectorEffect="non-scaling-stroke" />
-              </React.Fragment>;
-            })}
-          </svg>
+        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
+          {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
+          {areas.map((area, ai) => {
+            const col = "#" + (area.props.stroke || "3B82F6").replace("#","");
+            const pts = data.map((d, i) => ({ x: toX(i), y: toY(d[area.props.dataKey] || 0) }));
+            const clipPoly = pts.map(p => p.x+"% "+(100-p.y)+"%").join(", ") + ", 100% 100%, 0% 100%";
+            return <React.Fragment key={ai}>
+              <div style={{ position: "absolute", inset: 0, background: col, opacity: 0.1, clipPath: "polygon("+clipPoly+")" }} />
+              {pts.map((p, pi) => pi < pts.length - 1 ? (() => {
+                const p2 = pts[pi+1];
+                const dx = p2.x - p.x, dy = p2.y - p.y;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+                return <div key={pi} style={{ position: "absolute", bottom: p.y+"%", left: p.x+"%", width: len+"%", height: 2, background: col, transformOrigin: "0 50%", transform: "rotate("+angle+"deg)" }} />;
+              })() : null)}
+            </React.Fragment>;
+          })}
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", marginLeft: 38 }}>
@@ -171,7 +173,7 @@ const AreaChart = ({ data, children }) => {
 
 const Area = ({ dataKey, stroke, fill, strokeWidth, name, type }) => null;
 
-// Composed Chart — renders Bar children as SVG rects + Line children as SVG polyline overlay
+// CSS Composed Chart — bars as absolute divs + lines as CSS segments
 const ComposedChart = ({ data, children }) => {
   const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
   const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
@@ -181,50 +183,50 @@ const ComposedChart = ({ data, children }) => {
   const rawMax = Math.max(...allVals);
   const niceMax = Math.ceil(rawMax / 50) * 50 || rawMax || 100;
   const yTicks = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
-  const W = 100, H = 100;
-  const gw = W / data.length;
-  const bw = gw * 0.6 / Math.max(bars.length, 1);
+  const n = data.length;
+  const groupW = 100 / n;
+  const barW = groupW * 0.6 / Math.max(bars.length, 1);
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex" }}>
-        <div style={{ width: 32, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <div style={{ width: 36, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
           {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
         </div>
-        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative" }}>
+        <div style={{ flex: 1, borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", position: "relative", overflow: "hidden" }}>
           {[0.25, 0.5, 0.75].map(f => <div key={f} style={{ position: "absolute", left: 0, right: 0, bottom: (f*100)+"%", borderTop: "1px dashed #F1F5F9" }} />)}
-          <svg viewBox={"0 0 "+W+" "+H} style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
-            {data.map((d, di) =>
-              bars.map((b, bi) => {
-                const v = d[b.props.dataKey] || 0;
-                const clr = b.props.fill || "#3B82F6";
-                const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
-                const col = cells[di] ? cells[di].props.fill : clr;
-                const bh = niceMax > 0 ? (Math.abs(v)/niceMax)*H : 0;
-                const x = di*gw + gw*0.2 + bi*bw;
-                return <rect key={di+"-"+bi} x={x} y={H-bh} width={bw} height={bh} fill={col} opacity={b.props.opacity||0.85} rx={0.3} />;
-              })
-            )}
-            {lines.map((l, li) => {
-              const pts = data.map((d, di) => {
-                const v = d[l.props.dataKey] || 0;
-                const x = di * gw + gw * 0.5;
-                const y = niceMax > 0 ? H - (v / niceMax) * H : H;
-                return x + "," + y;
-              }).join(" ");
-              return <polyline key={"line-"+li} points={pts} fill="none" stroke={l.props.stroke || "#EF4444"} strokeWidth={l.props.strokeWidth || 0.8} vectorEffect="non-scaling-stroke" />;
-            })}
-            {lines.map((l, li) =>
-              data.map((d, di) => {
-                const v = d[l.props.dataKey] || 0;
-                const x = di * gw + gw * 0.5;
-                const y = niceMax > 0 ? H - (v / niceMax) * H : H;
-                return <circle key={"dot-"+li+"-"+di} cx={x} cy={y} r={0.8} fill={l.props.stroke || "#EF4444"} vectorEffect="non-scaling-stroke" />;
-              })
-            )}
-          </svg>
+          {data.map((d, di) =>
+            bars.map((b, bi) => {
+              const v = d[b.props.dataKey] || 0;
+              const clr = b.props.fill || "#3B82F6";
+              const cells = React.Children.toArray(b.props.children||[]).filter(c=>c&&c.type===Cell);
+              const col = cells[di] ? cells[di].props.fill : clr;
+              const pct = niceMax > 0 ? (Math.abs(v)/niceMax)*100 : 0;
+              const left = di*groupW + groupW*0.2 + bi*barW;
+              return <div key={di+"-"+bi} style={{ position: "absolute", bottom: 0, left: left+"%", width: barW+"%", height: pct+"%", background: col, opacity: b.props.opacity||0.85, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />;
+            })
+          )}
+          {lines.map((l, li) => {
+            const col = l.props.stroke || "#EF4444";
+            const pts = data.map((d, di) => {
+              const v = d[l.props.dataKey] || 0;
+              const x = di * groupW + groupW * 0.5;
+              const y = niceMax > 0 ? (v / niceMax) * 100 : 0;
+              return { x, y };
+            });
+            return <React.Fragment key={"line-"+li}>
+              {pts.map((p, pi) => pi < pts.length - 1 ? (() => {
+                const p2 = pts[pi+1];
+                const dx = p2.x - p.x, dy = p2.y - p.y;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+                return <div key={pi} style={{ position: "absolute", bottom: p.y+"%", left: p.x+"%", width: len+"%", height: 2, background: col, transformOrigin: "0 50%", transform: "rotate("+angle+"deg)", zIndex: 2 }} />;
+              })() : null)}
+              {pts.map((p, pi) => <div key={"d"+pi} style={{ position: "absolute", bottom: "calc("+p.y+"% - 3px)", left: "calc("+p.x+"% - 3px)", width: 6, height: 6, borderRadius: "50%", background: col, zIndex: 3 }} />)}
+            </React.Fragment>;
+          })}
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 32, padding: "4px 0" }}>
+      <div style={{ display: "flex", justifyContent: "space-around", marginLeft: 36, padding: "4px 0" }}>
         {data.map((d, i) => <span key={i} style={{ fontSize: 7, color: "#94A3B8", whiteSpace: "nowrap" }}>{d[Object.keys(d)[0]]}</span>)}
       </div>
       <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
