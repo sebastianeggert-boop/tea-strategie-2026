@@ -713,10 +713,10 @@ function CoverPage({ lang, onStart }) {
   useEffect(() => { setTimeout(() => setShow(true), 150); }, []);
 
   const kpis = [
-    { v: "104 T€", l: t("Betriebsergebnis Q1","Operating Result Q1"), sub: t("VJ nur 8 T€","PY only 8 k€") },
     { v: "67%", l: t("Rohertragsmarge Q1","Gross Margin Q1"), sub: t("Branchenspitze","Industry leading") },
-    { v: "89%", l: t("Eigenkapitalquote","Equity Ratio"), sub: t("Kerngesund","Healthy") },
     { v: "~24%", l: t("Exportquote Q1","Export Ratio Q1"), sub: t("Ziel 20% erreicht","Target 20% reached") },
+    { v: "AT·CH·NL", l: t("Neue Märkte","New Markets"), sub: t("Expansion 2026/27","Expansion 2026/27") },
+    { v: "Fokus-Lager", l: t("LinRol · Magnet · Verzahnung","LinRol · Magnetic · Gearing"), sub: t("Wir investieren","We invest") },
   ];
 
   return (
@@ -807,11 +807,11 @@ function SummaryPage({ lang }) {
       {/* Traffic light overview */}
       <Grid cols="repeat(6, 1fr)" gap={12} style={{ marginBottom: 28 }}>
         {[
-          { label: t("Ergebnis Q1","Result Q1"), status: "green", value: "104 T€" },
           { label: t("Rohertrag Q1","Gross Margin Q1"), status: "green", value: "67%" },
           { label: t("Exportquote Q1","Export Q1"), status: "green", value: "~24%" },
-          { label: t("Eigenkapital","Equity Ratio"), status: "green", value: "89%" },
+          { label: t("Materialquote Q1","Material Ratio Q1"), status: "green", value: "33%" },
           { label: t("Lager-Fokus","Stock Focus"), status: "amber", value: t("Aufbau","Build-up") },
+          { label: t("Neue Märkte","New Markets"), status: "amber", value: "AT·CH·NL" },
           { label: t("Team","Team"), status: "green", value: t("Bereit!","Ready!") },
         ].map((item, i) => (
           <div key={i} style={{
@@ -829,13 +829,13 @@ function SummaryPage({ lang }) {
       <Grid cols="3fr 2fr" gap={24} style={{ marginBottom: 24 }}>
         {/* Key message */}
         <Card accent={C.navy}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Stark gestartet — jetzt das Fundament für 2027 legen","Strong Start — Now Build the Foundation for 2027")}</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Wir investieren in Wachstum","We Invest in Growth")}</h3>
           <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.8 }}>
             <p style={{ margin: "0 0 10px 0" }}>
-              {t("Das erste Halbjahr 2026 lief deutlich besser als das Vorjahr: ","The first half of 2026 went significantly better than the previous year: ")}<strong style={{ color: C.text }}>{t("Betriebsergebnis und Rohertrag klar im Plus, Eigenkapitalquote bei 89%","operating result and gross margin clearly up, equity ratio at 89%")}</strong>{t(". TEA steht kerngesund da — trotz schwachem Maschinenbau und unsicherem Marktumfeld.",". TEA is in a fundamentally healthy position — despite weak machinery demand and an uncertain market.")}
+              {t("Das erste Halbjahr 2026 lief solide: ","The first half of 2026 went solidly: ")}<strong style={{ color: C.text }}>{t("starke Rohertragsmarge und eine Exportquote über Ziel","a strong gross margin and an export ratio above target")}</strong>{t(" — trotz schwachem Maschinenbau und unsicherem Marktumfeld. Statt abzuwarten, investieren wir gezielt in Wachstum."," — despite weak machinery demand and an uncertain market. Instead of waiting, we invest deliberately in growth.")}
             </p>
             <p style={{ margin: "0 0 10px 0" }}>
-              <strong style={{ color: C.text }}>{t("Unsere Stärke: 60 Jahre Expertise + ein breites Programm.","Our strength: 60 years of expertise + a broad range.")}</strong> {t("Wir nutzen das Polster, um gezielt in Wachstum zu investieren: neue Märkte (AT/CH/NL), ein fokussiertes Lager und KI-gestützte Prozesse.","We use that cushion to invest deliberately in growth: new markets (AT/CH/NL), a focused inventory and AI-supported processes.")}
+              <strong style={{ color: C.text }}>{t("Unsere Stärke: 60 Jahre Expertise + ein breites Programm.","Our strength: 60 years of expertise + a broad range.")}</strong> {t("Wir investieren in drei Hebel: neue Märkte (AT/CH/NL), ein fokussiertes Lager und KI-gestützte Prozesse.","We invest in three levers: new markets (AT/CH/NL), a focused inventory and AI-supported processes.")}
             </p>
             <p style={{ margin: 0 }}>
               <strong style={{ color: C.copper }}>{t("Die Vision:","The Vision:")}</strong> {t("TEA wird der schnelle, verlässliche Antriebstechnik-Partner im DACH-Raum. Den Robotik-Markt beobachten wir aufmerksam — und bestellen bei Bedarf erste Muster.","TEA becomes the fast, reliable drive technology partner in the DACH region. We watch the robotics market closely — and order first samples when it makes sense.")}
@@ -967,15 +967,15 @@ function FinancePage({ lang }) {
       <Grid cols="repeat(4, 1fr)" gap={14} style={{ marginBottom: 16 }}>
         <Metric label={t("Umsatz Q1 '26","Revenue Q1 '26")} value="518 T€" sub={t("−5,6% z. VJ (Markt)","−5.6% vs. PY (market)")} color={C.amber} trend="flat" />
         <Metric label={t("Rohertrag Q1","Gross Margin Q1")} value="67,1%" sub={t("VJ 60,1% — top","PY 60.1% — top")} color={C.green} trend="up" />
-        <Metric label={t("Betriebsergebnis Q1","Operating Result Q1")} value="104 T€" sub={t("VJ nur 8 T€","PY only 8 k€")} color={C.green} trend="up" />
-        <Metric label={t("Jahresüberschuss Q1","Net Income Q1")} value="115 T€" sub={t("VJ 9 T€ — starker Start","PY 9 k€ — strong start")} color={C.green} trend="up" />
+        <Metric label={t("Exportquote Q1","Export Ratio Q1")} value="~24%" sub={t("Ziel 20% erreicht","Target 20% reached")} color={C.green} trend="up" />
+        <Metric label={t("Materialquote Q1","Material Ratio Q1")} value="32,9%" sub={t("VJ 41,0% — besser","PY 41.0% — better")} color={C.green} trend="up" />
       </Grid>
 
       <Grid cols="repeat(4, 1fr)" gap={14} style={{ marginBottom: 28 }}>
-        <Metric label={t("Eigenkapitalquote","Equity Ratio")} value="89%" sub={t("Kerngesund","Fundamentally healthy")} color={C.navy} small />
-        <Metric label={t("Exportquote Q1","Export Ratio Q1")} value="~24%" sub={t("Ziel 20% erreicht","Target 20% reached")} color={C.green} trend="up" small />
+        <Metric label={t("Investitionsfokus","Investment Focus")} value={t("Wachstum","Growth")} sub={t("Märkte · Lager · KI","Markets · Stock · AI")} color={C.copper} small />
+        <Metric label={t("Neue Märkte","New Markets")} value="AT·CH·NL" sub={t("Expansion 2026/27","Expansion 2026/27")} color={C.blue} small />
         <Metric label={t("Lagerbestand","Inventory")} value="492 T€" sub={t("+54 T€ Fokus-Aufbau","+54 k€ focus build-up")} color={C.teal} trend="up" small />
-        <Metric label={t("Materialquote Q1","Material Ratio Q1")} value="32,9%" sub={t("VJ 41,0% — besser","PY 41.0% — better")} color={C.green} trend="up" small />
+        <Metric label={t("ISO-Zertifizierung","ISO Certification")} value={t("erteilt ✓","granted ✓")} sub={t("Türöffner INT","door opener INT")} color={C.green} small />
       </Grid>
 
       <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 24 }}>
@@ -988,11 +988,10 @@ function FinancePage({ lang }) {
               <YAxis yAxisId="left" tick={{ fontSize: 10, fill: C.textLight }} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
               <Bar yAxisId="left" dataKey="umsatz" fill={C.navy} radius={[4, 4, 0, 0]} name={t("Umsatz T€","Revenue k€")} opacity={0.85} />
-              <Line dataKey="ergebnis" stroke={C.copper} strokeWidth={2} name={t("Ergebnis T€","Result k€")} />
             </ComposedChart>
           </ResponsiveContainer>
           <div style={{ textAlign: "center", marginTop: 4 }}>
-            <Tag color={C.green}>{t("März '26: 203 T€ Umsatz, 89 T€ Ergebnis","Mar '26: 203 k€ rev., 89 k€ result")}</Tag>
+            <Tag color={C.green}>{t("März '26: 203 T€ — stärkster Monat","Mar '26: 203 k€ — strongest month")}</Tag>
           </div>
         </Card>
 
@@ -1049,8 +1048,8 @@ function FinancePage({ lang }) {
         <Card accent={C.green}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: C.green, margin: "0 0 14px 0" }}>{t("✓ Unsere Stärken","✓ Our Strengths")}</h3>
           {[
-            { t: t("Starkes Q1 2026","Strong Q1 2026"), d: t("Ergebnis und Rohertrag deutlich über Vorjahr. Das gibt Rückenwind für Investitionen.","Result and gross margin clearly above last year. That gives momentum for investments.") },
-            { t: t("Eigenkapitalquote 89%","Equity Ratio 89%"), d: t("Kerngesunde Bilanz, kaum Bankschulden. TEA kann aus eigener Kraft investieren.","Fundamentally healthy balance sheet, almost no bank debt. TEA can invest from its own strength.") },
+            { t: t("Starke Rohertragsmarge","Strong Gross Margin"), d: t("67% im Q1 — deutlich über Vorjahr. Beleg für gutes Einkaufs- und Preismanagement.","67% in Q1 — clearly above last year. Proof of good purchasing and pricing.") },
+            { t: t("Wir investieren in Wachstum","We Invest in Growth"), d: t("Statt abzuwarten: neue Märkte, fokussiertes Lager und KI-Prozesse — aus eigener Kraft finanziert.","Instead of waiting: new markets, focused inventory and AI processes — self-financed.") },
             { t: t("Wachstumsprodukte +242%","Growth Products +242%"), d: t("Verzahnung non-standard und Servomotoren wachsen stark. Innovation zahlt sich aus.","Non-standard gearing and servo motors growing strongly. Innovation pays off.") },
             { t: t("Breites Portfolio, 60+ Jahre","Broad Portfolio, 60+ Years"), d: t("11+ Warengruppen, tiefes Know-how, persönlicher Service — schwer kopierbar.","11+ product groups, deep know-how, personal service — hard to copy.") },
           ].map((s, i) => (
@@ -1158,95 +1157,23 @@ function ProductsPage({ lang }) {
   return (
     <div>
       <SectionHead
-        tag={t("Produktanalyse","PRODUCT ANALYSIS")}
+        tag={t("Produkte & Lager","PRODUCTS & STOCK")}
         title={t("Produkte & Lager — Fokus 2026/27","Products & Stock — Focus 2026/27")}
-        sub={t("10-Jahres-Warengruppen-Analyse 2016–2025 · BCG-Matrix · Fokusempfehlungen","10-Year Product Analysis 2016–2025 · BCG Matrix · Focus Recommendations")}
+        sub={t("Worauf wir uns konzentrieren — und was ausläuft","What we focus on — and what we phase out")}
       />
 
-      {/* BCG Matrix visual */}
-      <Card style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Strategische Produktbewertung (BCG-Matrix-Logik)","Strategic Product Assessment (BCG Matrix)")}</h3>
-        <p style={{ fontSize: 11, color: C.textLight, margin: "0 0 16px 0" }}>{t("X-Achse = Wachstum 5J (%) · Y-Achse = Umsatz 2025 (T€) · Blasengröße = Marge (%)","X = 5Y Growth (%) · Y = Revenue 2025 (k€) · Bubble = Margin (%)")}</p>
-        <ResponsiveContainer width="100%" height={300}>
-          <ScatterChart margin={{ top: 10, right: 30, bottom: 10, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
-            <XAxis type="number" dataKey="x" name={t("Wachstum 5J (%)","5Y Growth (%)")} tick={{ fontSize: 10, fill: C.textLight }} label={{ value: t("Wachstum 5J (%)","5Y Growth (%)"), position: "bottom", style: { fontSize: 10, fill: C.textLight } }} />
-            <YAxis type="number" dataKey="y" name={t("Umsatz 2025 (T€)","Revenue 2025 (k€)")} tick={{ fontSize: 10, fill: C.textLight }} label={{ value: t("Umsatz T€","Revenue k€"), angle: -90, position: "insideLeft", style: { fontSize: 10, fill: C.textLight } }} />
-            <ZAxis type="number" dataKey="z" range={[80, 400]} name={t("Marge (%)","Margin (%)")} />
-            <Tooltip content={({ payload }) => {
-              if (!payload?.length) return null;
-              const d = payload[0].payload;
-              return (
-                <div style={{ background: "#FFF", border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, fontSize: 11, boxShadow: C.shadow }}>
-                  <div style={{ fontWeight: 700 }}>{d.name}</div>
-                  <div>{t("Umsatz:","Revenue:")} {d.y} T€</div>
-                  <div>{t("Wachstum:","Growth:")} {d.x > 0 ? "+" : ""}{d.x}%</div>
-                  <div>{t("Marge:","Margin:")} ~{d.z}%</div>
-                </div>
-              );
-            }} />
-            {/* Reference lines for quadrants */}
-            <Scatter data={bcgData.filter(d => d.quadrant === "star")} fill={C.green} name="Stars" />
-            <Scatter data={bcgData.filter(d => d.quadrant === "cash")} fill={C.blue} name="Cash Cows" />
-            <Scatter data={bcgData.filter(d => d.quadrant === "question")} fill={C.amber} name="Question Marks" />
-            <Scatter data={bcgData.filter(d => d.quadrant === "dog")} fill={C.red} name="Dogs" />
-            <Legend wrapperStyle={{ fontSize: 10 }} />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </Card>
-
-      {/* Product table */}
-      <Card style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 16px 0" }}>{t("Top-11 Warengruppen nach Umsatz — Detailanalyse","Top 11 Products by Revenue — Analysis")}</h3>
-        <CompactTable
-          headers={[t("Warengruppe","Product Group"), t("Umsatz '25 (T€)","Rev. '25 (k€)"), t("Umsatz '20 (T€)","Rev. '20 (k€)"), t("Wachstum 5J","5Y Growth"), t("Marge","Margin"), t("BCG-Typ","BCG Type"), t("Empfehlung","Action")]}
-          rows={topProducts.map(p => [
-            p.name,
-            <span style={{ fontFamily: "'Playfair Display', 'Georgia', serif", fontWeight: 700 }}>{p.u2025}</span>,
-            <span style={{ color: C.textLight }}>{p.u2020}</span>,
-            <Tag color={p.growth > 50 ? C.green : p.growth > 0 ? C.teal : p.growth > -20 ? C.amber : C.red}>{p.growth > 0 ? "+" : ""}{p.growth}%</Tag>,
-            <span style={{ fontWeight: 600 }}>~{p.margin}%</span>,
-            <Tag color={p.quadrant === "star" ? C.green : p.quadrant === "cash" ? C.blue : p.quadrant === "question" ? C.amber : C.red} filled>
-              {p.quadrant === "star" ? "⭐ Star" : p.quadrant === "cash" ? "💰 Cash Cow" : p.quadrant === "question" ? "❓ Question" : "📉 Dog"}
-            </Tag>,
-            <span style={{ fontSize: 10, color: C.textMid }}>
-              {p.quadrant === "star" ? t("INVESTIEREN","INVEST") : p.quadrant === "cash" ? t("MARGE SICHERN","SECURE MARGIN") : p.quadrant === "question" ? t("ENTSCHEIDUNG Q3","DECIDE Q3") : t("AUSLAUFEN LASSEN","PHASE OUT")}
-            </span>,
-          ])}
-        />
-      </Card>
-
-      <Grid cols="1fr 1fr" gap={20}>
-        {/* Focus products */}
+      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 20 }}>
+        {/* Fokusprodukte */}
         <Card accent={C.copper}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Produkt-Fokus 2026/27: Top 5","Product Focus 2026/27: Top 5")}</h3>
-          {[
-            { n: t("1. Verzahnung non-standard","1. Non-standard Gearing"), reason: t("Kernkompetenz mit +242% Wachstum und 72% Marge. Alleinstellungsmerkmal im Markt. Kapazität ausbauen, aktiv vermarkten.","Core competence with +242% growth and 72% margin. Unique selling point. Expand capacity, actively market."), action: t("AUSBAUEN","EXPAND"), color: C.green },
-            { n: t("2. Servo-/Schrittmotoren","2. Servo/Stepper Motors"), reason: t("Zukunftsprodukt für Robotik & Automation. +148% in 5 Jahren. Lager aufbauen, Robotik-Kunden ansprechen.","Future product for robotics & automation. +148% in 5 years. Build stock, approach robotics customers."), action: t("INVESTIEREN","INVEST"), color: C.green },
-            { n: t("3. LinRol Führungen","3. LinRol Guides"), reason: t("Stabiles Kerngeschäft mit 36% Wachstum. Standardgrößen ab Lager für 48h-Lieferung aufbauen.","Stable core business with 36% growth. Build standard sizes from stock for 48h delivery."), action: t("LAGER AUFBAUEN","BUILD STOCK"), color: C.blue },
-            { n: t("4. Kugelumlaufführungen","4. Ball Screw Guides"), reason: t("Wachstumsprodukt (+84% seit 2020). Ergänzung zum Linearprogramm. Cross-Selling-Potenzial.","Growth product (+84% since 2020). Complement to linear program. Cross-selling potential."), action: t("FÖRDERN","PROMOTE"), color: C.teal },
-            { n: t("5. Magnetkupplungen","5. Magnetic Couplings"), reason: t("Nische mit 68% Marge und stabilem Umsatz. Wenig Wettbewerb. Vertrieb intensivieren.","Niche with 68% margin and stable revenue. Little competition. Intensify sales."), action: t("VERTRIEB PUSH","SALES PUSH"), color: C.copper },
-          ].map((p, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 12, padding: 10, borderRadius: 8, background: `${p.color}06` }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: p.color, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{i + 1}</div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 2 }}>{p.n} <Tag color={p.color}>{p.action}</Tag></div>
-                <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.reason}</div>
-              </div>
-            </div>
-          ))}
-        </Card>
-
-        {/* Lager-Strategie */}
-        <Card accent={C.teal}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Lager-Strategie 2026/27: Alt abbauen, Fokus aufbauen","Inventory Strategy 2026/27: Reduce Old, Build Focus")}</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Unsere Fokusprodukte","Our Focus Products")}</h3>
           <p style={{ fontSize: 11.5, color: C.textMid, lineHeight: 1.6, margin: "0 0 12px 0" }}>
-            {t("Lagerwert per 31.03.2026: ","Inventory value as of 31.03.2026: ")}<strong style={{ color: C.text }}>492 T€</strong> {t("(+54 T€ z. VJ). Wir schreiben alte, langsam drehende Bestände ab — und bauen gezielt margenstarke Fokusprodukte auf, die ab Lager in 48 h lieferbar sind.","(+54 k€ vs. PY). We write off old, slow-moving stock — and deliberately build up high-margin focus products, deliverable ex stock in 48 h.")}
+            {t("Diese Gruppen treiben wir aktiv: ab Lager in 48 h lieferbar, auf der Homepage sichtbar und über SEA gepusht.","We actively push these groups: deliverable ex stock in 48 h, visible on the homepage and pushed via SEA.")}
           </p>
           {[
-            { n: "LinRol-Führungen", val: "~101 T€", desc: t("Größter Fokusbereich — Standardgrößen ab Lager für 48h-Lieferung.","Largest focus area — standard sizes ex stock for 48h delivery."), color: C.blue },
-            { n: t("Verzahnungsteile","Gearing Parts"), val: "~49 T€", desc: t("Wachstumskern (+242%) und höchste Marge — aktiv bevorraten.","Growth core (+242%) and highest margin — actively stock."), color: C.green },
-            { n: "Magnetkupplungen", val: "~11 T€", desc: t("Margenstarke Nische (68%), wenig Wettbewerb — Vertrieb pushen.","High-margin niche (68%), little competition — push sales."), color: C.copper },
+            { n: "LinRol-Führungen", val: t("Kern","Core"), desc: t("Stabiles Kerngeschäft (+36%) — Standardgrößen ab Lager.","Stable core business (+36%) — standard sizes ex stock."), color: C.blue },
+            { n: t("Verzahnung non-standard","Non-standard gearing"), val: "+242%", desc: t("Stärkstes Wachstum, höchste Marge (72%) — ausbauen.","Strongest growth, highest margin (72%) — expand."), color: C.green },
+            { n: t("Servo-/Schrittmotoren","Servo/stepper motors"), val: "+148%", desc: t("Zukunftsprodukt für Automation — Lager aufbauen.","Future product for automation — build stock."), color: C.green },
+            { n: "Magnetkupplungen", val: "68%", desc: t("Margenstarke Nische, wenig Wettbewerb — Vertrieb pushen.","High-margin niche, little competition — push sales."), color: C.copper },
           ].map((p, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: 10, borderRadius: 8, background: `${p.color}06`, marginBottom: 8 }}>
               <div style={{ flex: 1 }}>
@@ -1256,66 +1183,41 @@ function ProductsPage({ lang }) {
               <Tag color={p.color}>{p.val}</Tag>
             </div>
           ))}
-          <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: `${C.teal}08`, border: `1px solid ${C.teal}20` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.teal, marginBottom: 3 }}>{t("🔎 Sichtbarkeit: Homepage + SEA","🔎 Visibility: Homepage + SEA")}</div>
-            <div style={{ fontSize: 10.5, color: C.textMid, lineHeight: 1.5 }}>
-              {t("Genau diese Fokusprodukte stehen auf der neuen Startseite im Mittelpunkt und werden über das SEA-Budget (Google Ads) gepusht.","These focus products take center stage on the new homepage and are pushed via the SEA budget (Google Ads).")}
-            </div>
-          </div>
+        </Card>
 
-          <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amber}20` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 3 }}>{t("⤵ Gegenstück: alte Bestände abbauen","⤵ Counterpart: reduce old stock")}</div>
+        {/* Lager-Strategie */}
+        <Card accent={C.teal}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Lager-Strategie 2026/27","Inventory Strategy 2026/27")}</h3>
+          <p style={{ fontSize: 11.5, color: C.textMid, lineHeight: 1.6, margin: "0 0 12px 0" }}>
+            {t("Wir schreiben alte, langsam drehende Bestände ab und investieren das frei werdende Kapital in die Fokusprodukte.","We write off old, slow-moving stock and invest the freed-up capital in the focus products.")}
+          </p>
+          {[
+            { n: "LinRol-Führungen", val: "~101 T€", desc: t("Größter Fokusbereich im Lager.","Largest focus area in stock."), color: C.blue },
+            { n: t("Verzahnungsteile","Gearing parts"), val: "~49 T€", desc: t("Wachstumskern, aktiv bevorraten.","Growth core, actively stock."), color: C.green },
+            { n: "Magnetkupplungen", val: "~11 T€", desc: t("Margenstarke Nische.","High-margin niche."), color: C.copper },
+          ].map((p, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: 9, borderRadius: 8, background: `${p.color}06`, marginBottom: 7 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{p.n}</div>
+                <div style={{ fontSize: 10.5, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+              </div>
+              <Tag color={p.color}>{p.val}</Tag>
+            </div>
+          ))}
+          <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amber}20` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 3 }}>{t("⤵ Auslauf: alte Bestände abbauen","⤵ Phase-out: reduce old stock")}</div>
             <div style={{ fontSize: 10.5, color: C.textMid, lineHeight: 1.5 }}>
-              {t("Auslaufprodukte (z. B. Kegelrad-/Schneckengetriebe) im Abverkauf — bindet Kapital, das wir in die Fokusprodukte umlenken.","Phase-out products (e.g. bevel/worm gearboxes) on clearance — they tie up capital we redirect to focus products.")}
+              {t("Kegelrad- und Schneckengetriebe im Abverkauf — sie binden Kapital, das wir umlenken.","Bevel and worm gearboxes on clearance — they tie up capital we redirect.")}
             </div>
           </div>
         </Card>
       </Grid>
 
-      <Grid cols="1fr 1fr" gap={20} style={{ marginTop: 24 }}>
-        {/* Cash Cows: Wellengelenke & Kupplungen */}
-        <Card accent={C.blue}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Cash Cows: Wellengelenke & Kupplungen","Cash Cows: Universal Joints & Couplings")}</h3>
-          {[
-            { n: t("Kupplungen","Couplings"), val: "94 T\u20AC", growth: "-10%", desc: t("Leichter R\u00FCckgang von 104 auf 94 T\u20AC in 5 Jahren. Solide Marge (62%). Strategie: Bestand optimieren, Standardgr\u00F6\u00DFen ab Lager liefern. Cross-Selling mit Motoren und Getrieben verst\u00E4rken. Kein aktives Investment, aber Margenerhalt sichern.","Slight decline from 104 to 94 k\u20AC in 5 years. Solid margin (62%). Strategy: optimize inventory, deliver standard sizes from stock. Strengthen cross-selling with motors and gearboxes. No active investment, but secure margin retention."), action: t("MARGE SICHERN","SECURE MARGIN"), color: C.blue },
-            { n: t("Wellengelenke","Universal Joints"), val: "94 T\u20AC", growth: "+8%", desc: t("Stabiler Umsatz mit leichtem Wachstum (+8%). Marge bei 60%. Strategie: Standardprogramm beibehalten, Sondergr\u00F6\u00DFen bei Bedarf anbieten. Synergiepotenzial mit Kupplungsprogramm nutzen. Vertrieb \u00FCber Online-Shop ausbauen.","Stable revenue with slight growth (+8%). Margin at 60%. Strategy: maintain standard program, offer special sizes on demand. Leverage synergy with coupling program. Expand sales via online shop."), action: t("HALTEN & ONLINE","HOLD & ONLINE"), color: C.teal },
-          ].map((p, i) => (
-            <div key={i} style={{ marginBottom: 14, padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, background: `${p.color}06` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Tag color={C.textMid}>{p.val}</Tag>
-                  <Tag color={parseFloat(p.growth) >= 0 ? C.green : C.amber}>{p.growth}</Tag>
-                  <Tag color={p.color}>{p.action}</Tag>
-                </div>
-              </div>
-              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
-            </div>
-          ))}
-        </Card>
-
-        {/* Poor Dogs Assessment */}
-        <Card accent={C.red}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Poor Dogs: Detailbewertung & Strategie","Poor Dogs: Assessment & Strategy")}</h3>
-          {[
-            { n: t("Schneckengetriebe","Worm Gearboxes"), val: "85 T\u20AC", growth: "-27%", desc: t("R\u00FCckgang von 116 auf 85 T\u20AC. Technologisch veraltet, zunehmend durch effizientere Planetengetriebe ersetzt. Strategie: Sortiment reduzieren, nur margenstarke Standardgr\u00F6\u00DFen behalten. Keine Neuinvestition, kontrollierter R\u00FCckzug bis 2027.","Decline from 116 to 85 k\u20AC. Technologically outdated, increasingly replaced by more efficient planetary gearboxes. Strategy: reduce range, keep only high-margin standard sizes. No new investment, controlled exit by 2027."), action: t("AUSLAUFEN","PHASE OUT"), color: C.red },
-            { n: t("Kegelradgetriebe","Bevel Gearboxes"), val: "71 T\u20AC", growth: "-68%", desc: t("Dramatischer R\u00FCckgang von 224 auf 71 T\u20AC \u2014 st\u00E4rkster Verlust im Portfolio. Marktanteil verloren an g\u00FCnstigere Fernost-Anbieter. Strategie: Restbest\u00E4nde abverkaufen, keine Nachbestellung. Fokus auf h\u00F6herwertige Verzahnungsteile umlenken.","Dramatic decline from 224 to 71 k\u20AC \u2014 biggest loss in portfolio. Market share lost to cheaper Far East suppliers. Strategy: sell remaining stock, no reorders. Redirect focus to higher-value gearing parts."), action: t("ABVERKAUF","SELL OFF"), color: C.red },
-            { n: t("Alu-Rollenf\u00FChrungen","Alu Roller Guides"), val: "67 T\u20AC", growth: "-13%", desc: t("Moderater R\u00FCckgang von 77 auf 67 T\u20AC. Nischenprodukt f\u00FCr leichte Linearanwendungen. Strategie: Als Erg\u00E4nzung zum LinRol-Programm beibehalten, aber kein aktiver Vertrieb. Bei weiterem R\u00FCckgang unter 50 T\u20AC aus Sortiment nehmen.","Moderate decline from 77 to 67 k\u20AC. Niche product for light linear applications. Strategy: retain as complement to LinRol program, but no active sales effort. Remove from range if further decline below 50 k\u20AC."), action: t("BEOBACHTEN","MONITOR"), color: C.amber },
-          ].map((p, i) => (
-            <div key={i} style={{ marginBottom: 14, padding: 12, border: `1px solid ${p.color}30`, borderRadius: 10, background: `${p.color}06` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Tag color={C.textMid}>{p.val}</Tag>
-                  <Tag color={C.red}>{p.growth}</Tag>
-                  <Tag color={p.color}>{p.action}</Tag>
-                </div>
-              </div>
-              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
-            </div>
-          ))}
-        </Card>
-      </Grid>
+      <InfoBox title={t("Aus dem Lager einen Vertriebsvorteil machen","Turning Inventory into a Sales Advantage")} color={C.navy} icon="📦">
+        <p style={{ margin: 0 }}>
+          {t("Fokusprodukte ab Lager in 48 h — genau diese stellen wir auf der neuen Homepage in den Mittelpunkt und pushen sie über das SEA-Budget (Google Ads). Alte Artikel laufen parallel aus. So wird unser Lager zum aktiven Verkaufshebel statt zum Kostenfaktor.","Focus products ex stock in 48 h — exactly these we put center stage on the new homepage and push via the SEA budget (Google Ads). Old items phase out in parallel. That turns our inventory into an active sales lever instead of a cost factor.")}
+        </p>
+      </InfoBox>
     </div>
   );
 }
@@ -1355,26 +1257,7 @@ function StrategyPage({ lang }) {
       </Grid>
 
       {/* Radar + Growth Pillars */}
-      <Grid cols="2fr 3fr" gap={20} style={{ marginBottom: 24 }}>
-        <Card>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Strategische Radar-Analyse","Strategic Radar Analysis")}</h3>
-          <p style={{ fontSize: 11, color: C.textLight, margin: "0 0 12px 0" }}>{t("IST-Stand vs. ZIEL Ende 2026","Current vs. Target End 2026")}</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <RadarChart data={radarIST.map(r => ({...r, dim: lang === "en" ? r.dimEn : r.dim}))}>
-              <PolarGrid stroke={C.borderLight} />
-              <PolarAngleAxis dataKey="dim" tick={{ fontSize: 9.5, fill: C.textMid }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
-              <Radar name={t("IST","ACTUAL")} dataKey="ist" stroke={C.red} fill={C.red} fillOpacity={0.15} strokeWidth={2} />
-              <Radar name={t("ZIEL '26","TARGET '26")} dataKey="ziel" stroke={C.green} fill={C.green} fillOpacity={0.1} strokeWidth={2} />
-              <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
-            </RadarChart>
-          </ResponsiveContainer>
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", fontSize: 11 }}>
-            <span style={{ color: C.red }}>● {t("IST-Stand","Current")}</span>
-            <span style={{ color: C.green }}>● {t("ZIEL 2026","TARGET 2026")}</span>
-          </div>
-        </Card>
-
+      <Grid cols="1fr" gap={20} style={{ marginBottom: 24 }}>
         <Card>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("4 strategische Wachstumssäulen (Ansoff-Logik)","4 Strategic Growth Pillars (Ansoff)")}</h3>
           <Grid cols="1fr 1fr" gap={12}>
@@ -1574,7 +1457,7 @@ function RiskPage({ lang }) {
         <Card accent={C.green}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: C.green, margin: "0 0 12px 0" }}>{t("Unsere Schutzfaktoren","Our Protective Factors")}</h3>
           {[
-            { t: t("Eigenkapitalquote 89%","Equity ratio 89%"), d: t("Kerngesunde Bilanz, kaum Schulden — wir können Krisen aushalten.","Healthy balance sheet, almost no debt — we can withstand crises.") },
+            { t: t("Solide finanziert","Solidly Financed"), d: t("Wir finanzieren Wachstum aus eigener Kraft — kaum abhängig von Banken.","We finance growth from our own strength — barely dependent on banks.") },
             { t: t("Breites Portfolio","Broad portfolio"), d: t("11+ Warengruppen, keine gefährliche Abhängigkeit von einem Produkt.","11+ product groups, no dangerous dependency on a single product.") },
             { t: t("Technische Expertise 60+ J.","Technical expertise 60+ yrs"), d: t("Beratung, Custom, Service — schwer kopierbar.","Consulting, custom, service — hard to copy.") },
             { t: t("Inhabergeführt","Owner-managed"), d: t("Schnelle Entscheidungen, langfristige Orientierung.","Fast decisions, long-term orientation.") },
@@ -1730,48 +1613,6 @@ function KPIPage({ lang }) {
           ]}
         />
       </Card>
-
-      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 24 }}>
-        <Card accent={C.navy}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Unser Meeting-Rhythmus","Our Meeting Rhythm")}</h3>
-          {[
-            { name: t("Wöchentliches Vertriebs-Meeting","Weekly Sales Meeting"), when: t("Montag 9:00 Uhr","Monday 9:00 AM"), who: t("Vertriebsteam","Sales team"), agenda: t("Umsatz vs. Wochenziel, offene Angebote, 48h-Follow-up, Fokusprodukte","Revenue vs. weekly target, open quotes, 48h follow-up, focus products"), icon: "📊" },
-            { name: t("Monats-Review","Monthly Review"), when: t("1. Arbeitstag im Monat","1st working day of month"), who: t("Ganzes Team","Whole team"), agenda: t("Zahlen des Vormonats, KPI-Soll/Ist, was lief gut, was nehmen wir uns vor","Last month's figures, KPI target/actual, what went well, what's next"), icon: "📋" },
-          ].map((m, i) => (
-            <div key={i} style={{ marginBottom: 12, padding: 14, border: `1px solid ${C.border}`, borderRadius: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 18 }}>{m.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{m.name}</div>
-                  <div style={{ fontSize: 10, color: C.copper, fontWeight: 600 }}>{m.when}</div>
-                </div>
-              </div>
-              <div style={{ fontSize: 10, color: C.textLight, marginTop: 4 }}>
-                <strong>{t("Wer:","Who:")}</strong> {m.who}<br />
-                <strong>{t("Agenda:","Agenda:")}</strong> {m.agenda}
-              </div>
-            </div>
-          ))}
-        </Card>
-
-        <Card accent={C.copper}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.copper, margin: "0 0 14px 0" }}>{t("Worauf es jede Woche ankommt","What Matters Every Week")}</h3>
-          {[
-            { t: t("48h-Follow-up einhalten","Keep the 48h follow-up"), d: t("Jede Anfrage und jedes Angebot innerhalb von 48 Stunden nachfassen.","Follow up on every inquiry and quote within 48 hours."), who: "Vertrieb" },
-            { t: t("Fokusprodukte aktiv anbieten","Actively offer focus products"), d: t("LinRol, Magnetkupplungen, Verzahnungsteile — ab Lager, schnell lieferbar.","LinRol, magnetic couplings, gearing parts — ex stock, quick delivery."), who: t("Alle","All") },
-            { t: t("Saubere Daten in Work4All","Clean data in Work4All"), d: t("Vollständige Anfragedaten = bessere Auswertungen und später KI-Unterstützung.","Complete inquiry data = better reports and later AI support."), who: t("Alle","All") },
-            { t: t("Alte Bestände abverkaufen","Sell off old stock"), d: t("Auslaufartikel aktiv anbieten — macht Platz und Kapital frei.","Actively offer phase-out items — frees up space and capital."), who: "Lager/Vertrieb" },
-          ].map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
-              <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${C.copper}`, flexShrink: 0, marginTop: 1 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{a.t}</div>
-                <div style={{ fontSize: 10, color: C.textLight, lineHeight: 1.5 }}>{a.d} · <span style={{ color: C.copper, fontWeight: 600 }}>{a.who}</span></div>
-              </div>
-            </div>
-          ))}
-        </Card>
-      </Grid>
 
       <InfoBox title={t("Die Zukunft beginnt jetzt — mit uns allen","The Future Starts Now — With All of Us")} color={C.navy} icon="🚀">
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.7 }}>
