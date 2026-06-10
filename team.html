@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEA 2026/27 — Strategie fürs Team</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"DM Sans","Segoe UI",sans-serif;background:#0F2137}
+#root{min-height:100vh}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="root"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0F2137;color:#C87941;font-family:Georgia,serif;font-size:20px;flex-direction:column;gap:16px"><div>TEA 2026</div><div style="font-size:12px;color:rgba(255,255,255,0.3);font-family:sans-serif">Dashboard wird geladen...</div></div></div>
+<script>window.onerror=function(m){document.getElementById("root").innerHTML="<div style=\"padding:40px;color:#EF4444;font-family:sans-serif;background:#0F2137;min-height:100vh\"><h2 style=\"color:#C87941\">Fehler</h2><pre style=\"margin-top:16px;color:#EF4444;font-size:12px;white-space:pre-wrap\">"+m+"</pre></div>"}</script>
+<script type="text/babel">
+
+// ═══════════════════════════════════════
+// CHART.JS WRAPPERS — production-grade chart rendering
+// ═══════════════════════════════════════
+const ResponsiveContainer = ({ children, width, height }) => (
+  <div style={{ width: width || "100%", height: height || 200, position: "relative" }}>{children}</div>
+);
+
+// Chart.js React hook — creates/destroys Chart instance
+const useChartJS = (ref, config) => {
+  const inst = React.useRef(null);
+  React.useEffect(() => {
+    if (!ref.current) return;
+    if (inst.current) inst.current.destroy();
+    inst.current = new Chart(ref.current, config);
+    return () => { if (inst.current) { inst.current.destroy(); inst.current = null; } };
+  });
+};
+
+// Bar Chart
+const BarChart = ({ data, children }) => {
+  const ref = React.useRef(null);
+  const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  useChartJS(ref, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: bars.map(b => {
+        const cells = React.Children.toArray(b.props.children || []).filter(c => c && c.type === Cell);
+        return {
+          label: b.props.name || b.props.dataKey,
+          data: data.map(d => d[b.props.dataKey] || 0),
+          backgroundColor: cells.length ? data.map((_, i) => (cells[i] && cells[i].props.fill) || b.props.fill || '#3B82F6') : (b.props.fill || '#3B82F6'),
+          borderRadius: 4,
+          barPercentage: 0.7,
+        };
+      }),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { display: bars.length > 1, labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+      },
+    },
+  });
+  return <canvas ref={ref} />;
+};
+
+const Bar = function(props) { return null; };
+const Cell = function(props) { return null; };
+
+// Line Chart
+const LineChart = ({ data, children }) => {
+  const ref = React.useRef(null);
+  const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  useChartJS(ref, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: lines.map(l => ({
+        label: l.props.name || l.props.dataKey,
+        data: data.map(d => d[l.props.dataKey]),
+        borderColor: l.props.stroke || '#3B82F6',
+        backgroundColor: 'transparent',
+        borderWidth: l.props.strokeWidth || 2,
+        borderDash: l.props.strokeDasharray ? [5, 5] : [],
+        pointRadius: 3,
+        pointBackgroundColor: l.props.stroke || '#3B82F6',
+        tension: 0.3,
+        fill: false,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+        y: { ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+      },
+    },
+  });
+  return <canvas ref={ref} />;
+};
+
+const Line = function(props) { return null; };
+
+// Area Chart
+const AreaChart = ({ data, children }) => {
+  const ref = React.useRef(null);
+  const areas = React.Children.toArray(children).filter(c => c && c.type === Area);
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  useChartJS(ref, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: areas.map(a => ({
+        label: a.props.name || a.props.dataKey,
+        data: data.map(d => d[a.props.dataKey]),
+        borderColor: a.props.stroke || '#3B82F6',
+        backgroundColor: a.props.fill || ((a.props.stroke || '#3B82F6') + '25'),
+        borderWidth: a.props.strokeWidth || 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+        y: { ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+      },
+    },
+  });
+  return <canvas ref={ref} />;
+};
+
+const Area = function(props) { return null; };
+
+// Composed Chart (bars + lines with dual y-axis)
+const ComposedChart = ({ data, children }) => {
+  const ref = React.useRef(null);
+  const bars = React.Children.toArray(children).filter(c => c && c.type === Bar);
+  const lines = React.Children.toArray(children).filter(c => c && c.type === Line);
+  const xAxis = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const labelKey = xAxis && xAxis.props.dataKey ? xAxis.props.dataKey : Object.keys(data[0] || {})[0];
+  const hasLines = lines.length > 0;
+  const scales = {
+    x: { ticks: { font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+    y: { position: 'left', beginAtZero: true, ticks: { font: { size: 9 } }, grid: { color: '#F1F5F9' } },
+  };
+  if (hasLines) {
+    scales.y1 = { position: 'right', ticks: { font: { size: 9 } }, grid: { drawOnChartArea: false } };
+  }
+  useChartJS(ref, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d[labelKey]),
+      datasets: [
+        ...bars.map(b => {
+          const cells = React.Children.toArray(b.props.children || []).filter(c => c && c.type === Cell);
+          return {
+            type: 'bar',
+            label: b.props.name || b.props.dataKey,
+            data: data.map(d => d[b.props.dataKey] || 0),
+            backgroundColor: cells.length ? data.map((_, i) => (cells[i] && cells[i].props.fill) || b.props.fill || '#3B82F6') : (b.props.fill || '#3B82F6'),
+            borderRadius: 4,
+            barPercentage: 0.7,
+            yAxisID: 'y',
+            order: 2,
+          };
+        }),
+        ...lines.map(l => ({
+          type: 'line',
+          label: l.props.name || l.props.dataKey,
+          data: data.map(d => d[l.props.dataKey]),
+          borderColor: l.props.stroke || '#EF4444',
+          backgroundColor: 'transparent',
+          borderWidth: l.props.strokeWidth || 2,
+          pointRadius: 3,
+          pointBackgroundColor: l.props.stroke || '#EF4444',
+          tension: 0.3,
+          fill: false,
+          yAxisID: hasLines ? 'y1' : 'y',
+          order: 1,
+        })),
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: { legend: { labels: { font: { size: 10 } } }, tooltip: { titleFont: { size: 11 }, bodyFont: { size: 11 } } },
+      scales: scales,
+    },
+  });
+  return <canvas ref={ref} />;
+};
+
+const PieChart = ({ children }) => {
+  const pie = React.Children.toArray(children).find(c => c && c.type === Pie);
+  if (!pie) return null;
+  const data = pie.props.data || [];
+  const total = data.reduce((s, d) => s + (d[pie.props.dataKey] || 0), 0);
+  const cells = React.Children.toArray(pie.props.children || []).filter(c => c && c.type === Cell);
+  let cum = 0;
+  return (
+    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+      <svg viewBox="-1.2 -1.2 2.4 2.4" style={{ width: 120, height: 120 }}>
+        {data.map((d, i) => {
+          const val = d[pie.props.dataKey] || 0;
+          const pct = val / total;
+          const start = cum * Math.PI * 2 - Math.PI/2;
+          cum += pct;
+          const end = cum * Math.PI * 2 - Math.PI/2;
+          const large = pct > 0.5 ? 1 : 0;
+          const x1 = Math.cos(start), y1 = Math.sin(start);
+          const x2 = Math.cos(end), y2 = Math.sin(end);
+          const inner = pie.props.innerRadius ? 0.5 : 0;
+          const color = cells[i] ? cells[i].props.fill : (d.color || ["#0F2137","#C87941","#14B8A6","#3B82F6","#22C55E"][i % 5]);
+          if (inner > 0) {
+            const ix1 = x1*inner, iy1 = y1*inner, ix2 = x2*inner, iy2 = y2*inner;
+            return <path key={i} d={"M"+x1+","+y1+" A1,1 0 "+large+",1 "+x2+","+y2+" L"+ix2+","+iy2+" A"+inner+","+inner+" 0 "+large+",0 "+ix1+","+iy1+"Z"} fill={color} />;
+          }
+          return <path key={i} d={"M0,0 L"+x1+","+y1+" A1,1 0 "+large+",1 "+x2+","+y2+"Z"} fill={color} />;
+        })}
+      </svg>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {data.map((d, i) => {
+          const color = cells[i] ? cells[i].props.fill : (d.color || ["#0F2137","#C87941","#14B8A6","#3B82F6","#22C55E"][i % 5]);
+          return <div key={i} style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
+            <span style={{ color: "#475569" }}>{d.name || d[Object.keys(d)[0]]} {((d[pie.props.dataKey]/total)*100).toFixed(0)}%</span>
+          </div>;
+        })}
+      </div>
+    </div>
+  );
+};
+
+const Pie = ({ data, dataKey, cx, cy, innerRadius, outerRadius, label, labelLine, children }) => null;
+
+// Radar Chart
+const RadarChart = ({ data, children }) => {
+  const radars = React.Children.toArray(children).filter(c => c && c.type === Radar);
+  if (!data || !data.length) return <div />;
+  const n = data.length;
+  const cx = 50, cy = 50, r = 38;
+  const angleStep = (Math.PI * 2) / n;
+  const getPoint = (i, val) => {
+    const a = i * angleStep - Math.PI / 2;
+    const d = (val / 100) * r;
+    return { x: cx + d * Math.cos(a), y: cy + d * Math.sin(a) };
+  };
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <svg viewBox="0 0 100 100" style={{ flex: 1, maxHeight: "85%" }}>
+        {[20,40,60,80,100].map(v => (
+          <polygon key={v} points={data.map((_,i) => { const p = getPoint(i, v); return p.x+","+p.y; }).join(" ")} fill="none" stroke="#E2E8F0" strokeWidth={0.3} />
+        ))}
+        {data.map((_, i) => {
+          const p = getPoint(i, 100);
+          return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#E2E8F0" strokeWidth={0.3} />;
+        })}
+        {radars.map((radar, ri) => {
+          const col = (radar.props.stroke || "EF4444").replace("#","");
+          const pts = data.map((d, i) => getPoint(i, d[radar.props.dataKey] || 0));
+          return <polygon key={ri} points={pts.map(p=>p.x+","+p.y).join(" ")} fill={"#"+col} fillOpacity={radar.props.fillOpacity || 0.15} stroke={"#"+col} strokeWidth={1} />;
+        })}
+        {data.map((d, i) => {
+          const p = getPoint(i, 112);
+          const dimKey = Object.keys(d).find(k => typeof d[k] === "string") || Object.keys(d)[0];
+          return <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 3.5, fill: "#475569" }}>{d[dimKey]}</text>;
+        })}
+      </svg>
+      <div style={{display:"flex",gap:12,justifyContent:"center"}}>
+        {radars.map((r,i) => <span key={i} style={{fontSize:10,color:"#"+(r.props.stroke||"333").replace("#","")}}>● {r.props.name||r.props.dataKey}</span>)}
+      </div>
+    </div>
+  );
+};
+
+const Radar = ({ name, dataKey, stroke, fill, fillOpacity, strokeWidth }) => null;
+const PolarGrid = () => null;
+const PolarAngleAxis = () => null;
+const PolarRadiusAxis = () => null;
+
+// Scatter Chart with proper X/Y axis labels and ticks
+const ScatterChart = ({ children, margin }) => {
+  const scatters = React.Children.toArray(children).filter(c => c && c.type === Scatter);
+  const allData = scatters.flatMap(s => (s.props.data || []).map(d => ({...d, _color: s.props.fill})));
+  if (!allData.length) return <div style={{height:"100%"}} />;
+  const xMin = Math.min(...allData.map(d=>d.x)); const xMax = Math.max(...allData.map(d=>d.x));
+  const yMin = Math.min(...allData.map(d=>d.y)); const yMax = Math.max(...allData.map(d=>d.y));
+  // Add padding to ranges
+  const xPad = (xMax - xMin) * 0.1 || 10; const yPad = (yMax - yMin) * 0.1 || 10;
+  const xLo = xMin - xPad; const xHi = xMax + xPad;
+  const yLo = Math.max(0, yMin - yPad); const yHi = yMax + yPad;
+  const xRange = xHi - xLo || 1; const yRange = yHi - yLo || 1;
+  // Generate nice tick values
+  const xTickCount = 7; const yTickCount = 5;
+  const xTicks = Array.from({length: xTickCount}, (_, i) => Math.round(xLo + (xRange * i / (xTickCount - 1))));
+  const yTicks = Array.from({length: yTickCount}, (_, i) => Math.round(yLo + (yRange * i / (yTickCount - 1))));
+  // Find XAxis/YAxis children for labels
+  const xAxisChild = React.Children.toArray(children).find(c => c && c.type === XAxis);
+  const yAxisChild = React.Children.toArray(children).find(c => c && c.type === YAxis);
+  const xLabel = xAxisChild?.props?.label?.value || xAxisChild?.props?.name || "";
+  const yLabel = yAxisChild?.props?.label?.value || yAxisChild?.props?.name || "";
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex" }}>
+        {/* Y-axis label (rotated) */}
+        <div style={{ width: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {yLabel && <span style={{ fontSize: 9, color: "#94A3B8", writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}>{yLabel}</span>}
+        </div>
+        {/* Y-axis ticks */}
+        <div style={{ width: 32, display: "flex", flexDirection: "column-reverse", justifyContent: "space-between", paddingBottom: 2, paddingRight: 4 }}>
+          {yTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8", textAlign: "right", lineHeight: 1 }}>{v}</span>)}
+        </div>
+        {/* Plot area */}
+        <div style={{ flex: 1, position: "relative", borderLeft: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0" }}>
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map(f => <div key={"h"+f} style={{ position: "absolute", left: 0, right: 0, bottom: (f * 100) + "%", borderTop: "1px dashed #F1F5F9" }} />)}
+          {[0.25, 0.5, 0.75].map(f => <div key={"v"+f} style={{ position: "absolute", top: 0, bottom: 0, left: (f * 100) + "%", borderLeft: "1px dashed #F1F5F9" }} />)}
+          {/* Zero line if range crosses zero */}
+          {xLo < 0 && xHi > 0 && <div style={{ position: "absolute", top: 0, bottom: 0, left: ((0 - xLo) / xRange * 100) + "%", borderLeft: "1px solid #CBD5E1" }} />}
+          {/* Data points */}
+          {allData.map((d, i) => {
+            const left = ((d.x - xLo) / xRange) * 100;
+            const bottom = ((d.y - yLo) / yRange) * 100;
+            const size = Math.max(10, Math.min(24, (d.z || 50) / 4));
+            return <div key={i} title={d.name + ": " + d.y + " k\u20AC, " + (d.x>0?"+":"") + d.x + "% growth, ~" + d.z + "% margin"} style={{
+              position: "absolute", left: left+"%", bottom: bottom+"%",
+              width: size, height: size, borderRadius: "50%",
+              background: d._color || "#3B82F6", opacity: 0.75,
+              transform: "translate(-50%, 50%)", cursor: "pointer",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+            }} />;
+          })}
+        </div>
+      </div>
+      {/* X-axis ticks */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginLeft: 48, padding: "4px 0" }}>
+        {xTicks.map((v, i) => <span key={i} style={{ fontSize: 8, color: "#94A3B8" }}>{v}</span>)}
+      </div>
+      {/* X-axis label */}
+      {xLabel && <div style={{ textAlign: "center", marginLeft: 48, fontSize: 9, color: "#94A3B8", marginTop: -2 }}>{xLabel}</div>}
+      {/* Legend */}
+      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",fontSize:9,marginTop:4}}>
+        {scatters.map((s,i) => <span key={i} style={{color:s.props.fill}}>● {s.props.name}</span>)}
+      </div>
+    </div>
+  );
+};
+
+const Scatter = ({ data, fill, name }) => null;
+const ZAxis = () => null;
+
+// Unused stubs
+const XAxis = () => null;
+const YAxis = () => null;
+const CartesianGrid = () => null;
+const Tooltip = () => null;
+const Legend = () => null;
+
+
+const langToggleStyle = {position:"fixed",top:14,right:18,zIndex:9999,display:"flex",gap:2,background:"rgba(15,33,55,0.92)",borderRadius:8,padding:3,border:"1px solid rgba(255,255,255,0.08)",backdropFilter:"blur(12px)",boxShadow:"0 2px 12px rgba(0,0,0,0.3)"};
+const langBtnBase = {padding:"6px 16px",border:"none",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:0.5};
+
+function LangToggle({ lang, setLang }) {
+  return (
+    <div style={langToggleStyle}>
+      <button style={{...langBtnBase, background: lang==='de'?"#C87941":"transparent", color: lang==='de'?"#fff":"rgba(255,255,255,0.4)"}} onClick={()=>setLang('de')}>DE</button>
+      <button style={{...langBtnBase, background: lang==='en'?"#C87941":"transparent", color: lang==='en'?"#fff":"rgba(255,255,255,0.4)"}} onClick={()=>setLang('en')}>EN</button>
+    </div>
+  );
+}
+
+function PasswordGate({ onUnlock, lang, setLang }) {
+  const [pw, setPw] = React.useState('');
+  const [err, setErr] = React.useState(false);
+  const en = lang === 'en';
+  const check = () => { if (pw === 'TEA2026') onUnlock(); else { setErr(true); setTimeout(() => setErr(false), 2000); } };
+  return (
+    <div>
+      <LangToggle lang={lang} setLang={setLang} />
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(155deg,#080F1A 0%,#0F2137 40%,#1B3A5C 75%,#1A4C7A 100%)",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",inset:0,opacity:0.03,backgroundImage:"radial-gradient(circle at 1px 1px,rgba(255,255,255,0.4) 1px,transparent 0)",backgroundSize:"40px 40px"}} />
+        <div style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:24,padding:"52px 44px",textAlign:"center",position:"relative",zIndex:1,maxWidth:440,width:"90%",animation:"fadeUp 0.8s ease-out"}}>
+          <div style={{fontSize:10,color:"#C87941",letterSpacing:5,textTransform:"uppercase",fontWeight:600,marginBottom:24}}>{en ? 'Confidential Document' : 'Vertrauliches Dokument'}</div>
+          <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:48,fontWeight:900,color:"#fff",marginBottom:4,lineHeight:1.1}}>TEA <span style={{color:"#C87941"}}>2026</span></h1>
+          <div style={{width:50,height:3,background:"linear-gradient(90deg,#C87941,#D4A853)",margin:"16px auto 20px",borderRadius:2}} />
+          <p style={{fontSize:13,color:"rgba(255,255,255,0.35)",marginBottom:36,fontStyle:"italic"}}>{en ? 'Strategic Action Plan — Password Protected' : 'Strategieplan — Passwortgeschützt'}</p>
+          <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:1,textTransform:"uppercase",marginBottom:8,fontWeight:600}}>{en ? 'Password' : 'Passwort'}</div>
+          <input style={{width:"100%",padding:"14px 18px",borderRadius:12,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.04)",color:"#fff",fontSize:15,fontFamily:"inherit",outline:"none",textAlign:"center",letterSpacing:3}} type="password" placeholder={en?"Enter password...":"Passwort eingeben..."} value={pw} onChange={(e)=>setPw(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&check()} autoFocus />
+          <button onClick={check} style={{width:"100%",marginTop:18,padding:15,border:"none",borderRadius:12,background:"linear-gradient(135deg,#C87941,#E09E6A)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",letterSpacing:0.8}}>{en?'Access Dashboard →':'Zugang erhalten →'}</button>
+          {err && <div style={{color:"#EF4444",fontSize:12,marginTop:14,animation:"shake 0.3s ease-in-out"}}>{en?'Wrong password.':'Falsches Passwort.'}</div>}
+          <div style={{fontSize:10,color:"rgba(255,255,255,0.12)",marginTop:28,letterSpacing:1.5}}>Technische Antriebselemente GmbH · Hamburg</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const { useState, useEffect, useRef, useMemo } = React;
+// Recharts replaced by CSS charts (see shim below)
+
+// ═══════════════════════════════════════════════════════════
+// TEA STRATEGY 2026 — INTERACTIVE MANAGEMENT DASHBOARD v2
+// Technische Antriebselemente GmbH, Hamburg
+// ═══════════════════════════════════════════════════════════
+
+// ─── DESIGN SYSTEM ───
+const C = {
+  // Primary palette
+  navy: "#0F2137",
+  navyLight: "#1B3A5C",
+  slate: "#334155",
+  // Accent
+  copper: "#C87941",
+  copperLight: "#E09E6A",
+  copperGlow: "rgba(200,121,65,0.15)",
+  gold: "#D4A853",
+  // Semantic
+  green: "#22C55E",
+  greenSoft: "#DCFCE7",
+  red: "#EF4444",
+  redSoft: "#FEE2E2",
+  amber: "#F59E0B",
+  amberSoft: "#FEF3C7",
+  blue: "#3B82F6",
+  blueSoft: "#DBEAFE",
+  teal: "#14B8A6",
+  // Neutrals
+  bg: "#F8FAFC",
+  card: "#FFFFFF",
+  border: "#E2E8F0",
+  borderLight: "#F1F5F9",
+  text: "#0F172A",
+  textMid: "#475569",
+  textLight: "#94A3B8",
+  // Special
+  glassBg: "rgba(255,255,255,0.72)",
+  glassBorder: "rgba(255,255,255,0.2)",
+  shadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)",
+  shadowHover: "0 4px 24px rgba(0,0,0,0.1)",
+  shadowLg: "0 8px 40px rgba(0,0,0,0.08)",
+};
+
+const PAGES = [
+  { id: "cover", label: "Start", icon: "◆", group: "start" },
+  { id: "summary", label: "Überblick & Vision", icon: "⚡", group: "overview" },
+  { id: "finance", label: "Geschäftsentwicklung", icon: "◇", group: "analyse" },
+  { id: "market", label: "Markt & Wettbewerb", icon: "◈", group: "analyse" },
+  { id: "products", label: "Produkte & Lager", icon: "⬡", group: "analyse" },
+  { id: "strategy", label: "Strategieplan 26/27", icon: "◉", group: "strategie" },
+  { id: "digital", label: "KI-Plan (Kurzüberblick)", icon: "⬢", group: "strategie" },
+  { id: "risk", label: "Risiken (kompakt)", icon: "△", group: "umsetzung" },
+  { id: "roadmap", label: "Roadmap 26/27", icon: "▷", group: "umsetzung" },
+  { id: "kpi", label: "Unsere Ziele & KPIs", icon: "◈", group: "steuerung" },
+];
+
+const GROUPS = {
+  overview: "ÜBERBLICK",
+  analyse: "ANALYSE",
+  strategie: "STRATEGIE",
+  umsetzung: "UMSETZUNG",
+  steuerung: "STEUERUNG",
+};
+
+
+const EN_NAV = {
+  summary:"Overview & Vision", finance:"Business Performance", market:"Market & Competition",
+  products:"Products & Stock", strategy:"Strategy Plan 26/27",
+  digital:"AI Plan (Summary)", risk:"Risks (compact)",
+  roadmap:"Roadmap 26/27", kpi:"Our Goals & KPIs",
+};
+const EN_GRP = { overview:"OVERVIEW", analyse:"ANALYSIS", strategie:"STRATEGY", umsetzung:"IMPLEMENTATION", steuerung:"CONTROLLING" };
+
+// ─── DATA SETS ───
+const revenueHistory = [
+  { year: "2016", umsatz: 2350, rohertrag: 1376, result: 95 },
+  { year: "2017", umsatz: 2380, rohertrag: 1426, result: 110 },
+  { year: "2018", umsatz: 2450, rohertrag: 1477, result: 125 },
+  { year: "2019", umsatz: 2300, rohertrag: 1323, result: 80 },
+  { year: "2020", umsatz: 1900, rohertrag: 1062, result: -20 },
+  { year: "2021", umsatz: 2350, rohertrag: 1359, result: 90 },
+  { year: "2022", umsatz: 2280, rohertrag: 1375, result: 85 },
+  { year: "2023", umsatz: 2576, rohertrag: 1512, result: 140 },
+  { year: "2024", umsatz: 2576, rohertrag: 1473, result: -69 },
+  { year: "2025", umsatz: 2046, rohertrag: 1255, result: 148 },
+];
+
+const revenueForecast = [
+  { year: "2025", umsatz: 2046, pessimist: 2046, basis: 2046, optimist: 2046 },
+  { year: "2026Z", umsatz: null, pessimist: 2100, basis: 2250, optimist: 2450 },
+  { year: "2027Z", umsatz: null, pessimist: 2250, basis: 2600, optimist: 2900 },
+  { year: "2028Z", umsatz: null, pessimist: 2400, basis: 3000, optimist: 3400 },
+];
+
+const monthlyBWA2025 = [
+  { mon: "Jan", umsatz: 188, ergebnis: 17, rohertrag: 59.1 },
+  { mon: "Feb", umsatz: 167, ergebnis: -26, rohertrag: 57.2 },
+  { mon: "Mär", umsatz: 193, ergebnis: 18, rohertrag: 62.3 },
+  { mon: "Apr", umsatz: 193, ergebnis: 23, rohertrag: 61.5 },
+  { mon: "Mai", umsatz: 156, ergebnis: -21, rohertrag: 58.7 },
+  { mon: "Jun", umsatz: 147, ergebnis: -4, rohertrag: 55.4 },
+  { mon: "Jul", umsatz: 187, ergebnis: 60, rohertrag: 65.2 },
+  { mon: "Aug", umsatz: 150, ergebnis: 13, rohertrag: 60.1 },
+  { mon: "Sep", umsatz: 169, ergebnis: 35, rohertrag: 63.8 },
+  { mon: "Okt", umsatz: 134, ergebnis: -8, rohertrag: 54.2 },
+  { mon: "Nov", umsatz: 156, ergebnis: 10, rohertrag: 61.0 },
+  { mon: "Dez", umsatz: 205, ergebnis: 32, rohertrag: 62.8 },
+  { mon: "Jan'26", umsatz: 188, ergebnis: 20, rohertrag: 60.6 },
+  { mon: "Feb'26", umsatz: 127, ergebnis: 7, rohertrag: 61.6 },
+  { mon: "Mär'26", umsatz: 203, ergebnis: 89, rohertrag: 76.6 },
+];
+
+const topProducts = [
+  { name: "Verzahnung n.s.", u2025: 188, u2020: 55, u2016: 42, margin: 72, growth: 242, quadrant: "star" },
+  { name: "LinRol", u2025: 185, u2020: 136, u2016: 155, margin: 58, growth: 36, quadrant: "cash" },
+  { name: "Linearaktuatoren", u2025: 167, u2020: 321, u2016: 280, margin: 55, growth: -48, quadrant: "question" },
+  { name: "Servo/Schrittmotoren", u2025: 134, u2020: 54, u2016: 18, margin: 65, growth: 148, quadrant: "star" },
+  { name: "Kupplungen", u2025: 94, u2020: 104, u2016: 120, margin: 62, growth: -10, quadrant: "cash" },
+  { name: "Wellengelenke", u2025: 94, u2020: 87, u2016: 95, margin: 60, growth: 8, quadrant: "cash" },
+  { name: "Schneckengetriebe", u2025: 85, u2020: 116, u2016: 140, margin: 58, growth: -27, quadrant: "dog" },
+  { name: "Kegelradgetriebe", u2025: 71, u2020: 224, u2016: 195, margin: 52, growth: -68, quadrant: "dog" },
+  { name: "Alu-Rollenführ.", u2025: 67, u2020: 77, u2016: 85, margin: 56, growth: -13, quadrant: "dog" },
+  { name: "Magnetkupplungen", u2025: 60, u2020: 59, u2016: 45, margin: 68, growth: 2, quadrant: "question" },
+  { name: "Kugelumlaufführ.", u2025: 55, u2020: 30, u2016: 22, margin: 48, growth: 84, quadrant: "star" },
+];
+
+const bcgData = topProducts.map(p => ({
+  name: p.name,
+  x: p.growth, // market growth (we use product growth as proxy)
+  y: p.u2025,  // relative market share (revenue as proxy)
+  z: p.margin, // bubble size = margin
+  quadrant: p.quadrant,
+}));
+
+const exportData = [
+  { name: "Deutschland", nameEn: "Germany", value: 75.8, color: C.navy },
+  { name: "EU (ig. Lieferung)", nameEn: "EU (intra-community)", value: 18.1, color: C.copper },
+  { name: "Ausfuhr/Drittland", nameEn: "Export/third countries", value: 5.0, color: C.teal },
+  { name: "Sonstige steuerfrei", nameEn: "Other tax-free", value: 1.1, color: C.blue },
+];
+
+const radarIST = [
+  { dim: "Profitabilität", dimEn: "Profitability", ist: 85, ziel: 88 },
+  { dim: "Umsatzwachstum", dimEn: "Revenue Growth", ist: 20, ziel: 75 },
+  { dim: "Internationalisierung", dimEn: "Internationalization", ist: 25, ziel: 65 },
+  { dim: "Digitalisierung", dimEn: "Digitalization", ist: 20, ziel: 70 },
+  { dim: "Neukundengewinnung", dimEn: "New Customer Acq.", ist: 30, ziel: 60 },
+  { dim: "Innovation", dimEn: "Innovation", ist: 35, ziel: 65 },
+  { dim: "Mitarbeiterzufriedenheit", dimEn: "Employee Satisfaction", ist: 50, ziel: 80 },
+  { dim: "Prozesseffizienz", dimEn: "Process Efficiency", ist: 40, ziel: 70 },
+];
+
+const risks = [
+  { name: "Maschinenbaukrise hält an", nameEn: "Machinery crisis persists", prob: 3, impact: 4, cat: "Markt", catEn: "Market", mitigation: "Diversifikation, Expansion AT/CH/NL, Fokus auf margenstarke Produkte (LinRol, Magnet, Verzahnung)", mitigationEn: "Diversification, expansion AT/CH/NL, focus on high-margin products" },
+  { name: "China-/Plattform-Preisdruck", nameEn: "China / platform price pressure", prob: 4, impact: 3, cat: "Wettbewerb", catEn: "Competition", mitigation: "Differenzierung über Beratung, Custom, Service und Geschwindigkeit statt Preis", mitigationEn: "Differentiation via consulting, custom, service and speed instead of price" },
+  { name: "Geopolitik (Nahost): Lieferketten & Preise", nameEn: "Geopolitics (Middle East): supply chains & prices", prob: 4, impact: 4, cat: "Geopolitik", catEn: "Geopolitics", mitigation: "EU-Sourcing stärken, Sicherheitsbestände, Dual Sourcing, Preisgleitklauseln", mitigationEn: "Strengthen EU sourcing, safety stocks, dual sourcing, price escalation clauses" },
+  { name: "Lieferengpässe (Supply Chain)", nameEn: "Supply chain disruptions", prob: 3, impact: 3, cat: "Einkauf", catEn: "Procurement", mitigation: "Dual Sourcing, Sicherheitsbestand der Fokusprodukte aufbauen", mitigationEn: "Dual sourcing, safety stock of focus products" },
+  { name: "Wissen/Fachkräfte sichern", nameEn: "Securing know-how & skilled staff", prob: 3, impact: 2, cat: "Personal", catEn: "Personnel", mitigation: "Weiterbildung, Wissen im Team verteilen (Wiki), klare Vertretungsregeln", mitigationEn: "Training, share knowledge in the team (wiki), clear backup rules" },
+  { name: "IT-Sicherheit", nameEn: "IT security", prob: 2, impact: 3, cat: "IT", catEn: "IT", mitigation: "Backups, Awareness-Schulung, saubere Daten vor KI-Zugriff", mitigationEn: "Backups, awareness training, clean data before AI access" },
+];
+
+// Team development areas for 2026
+const teamDevAreas = [
+  { area: "Internationale Kompetenz", areaEn: "International Competence", desc: "Englisch-Kommunikation, Exportabwicklung, Zoll & Compliance für AT/CH/NL", descEn: "English communication, export processing, customs & compliance for AT/CH/NL", prio: "HOCH", prioEn: "HIGH", timeline: "Q2–Q4" },
+  { area: "Elektrotechnik & Antriebstechnik", areaEn: "Electrical & Drive Engineering", desc: "Vertiefung technisches Wissen für Beratung und Vertrieb", descEn: "Deepening technical knowledge for consulting and sales", prio: "HOCH", prioEn: "HIGH", timeline: "Q2–Q3" },
+  { area: "KI & Digitale Tools", areaEn: "AI & Digital Tools", desc: "Chatbot-Administration, Konfigurator-Pflege, KI-Auftragsabwicklung", descEn: "Chatbot admin, configurator maintenance, AI order processing", prio: "MITTEL", prioEn: "MEDIUM", timeline: "Q2–Q4" },
+  { area: "Vertrieb & Kundenberatung", areaEn: "Sales & Customer Advisory", desc: "Beratungskompetenz, Angebotserstellung, Follow-up-Prozesse", descEn: "Advisory skills, quote creation, follow-up processes", prio: "MITTEL", prioEn: "MEDIUM", timeline: "ongoing" },
+  { area: "Produktwissen Robotik", areaEn: "Robotics Product Knowledge", desc: "Neue Produktgruppe: Robotik-Komponenten, Cobots, Integratoren-Bedarf", descEn: "New product group: robotics components, cobots, integrator needs", prio: "HOCH", prioEn: "HIGH", timeline: "Q2–Q3" },
+];
+
+// ─── REUSABLE COMPONENTS ───
+const Card = ({ children, style, accent, noPad }) => (
+  <div style={{
+    background: C.card,
+    borderRadius: 14,
+    padding: noPad ? 0 : 24,
+    boxShadow: C.shadow,
+    borderTop: accent ? `3px solid ${accent}` : "none",
+    overflow: "hidden",
+    ...style,
+  }}>{children}</div>
+);
+
+const Metric = ({ label, value, sub, color, trend, small }) => (
+  <div style={{
+    background: C.card,
+    borderRadius: 12,
+    padding: small ? "14px 18px" : "18px 22px",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+    borderLeft: `3px solid ${color || C.copper}`,
+    position: "relative",
+  }}>
+    <div style={{ fontSize: 11, color: C.textLight, letterSpacing: 0.8, textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>{label}</div>
+    <div style={{ fontSize: small ? 22 : 28, fontWeight: 800, color: C.text, fontFamily: "'Playfair Display', 'Georgia', serif", lineHeight: 1.1 }}>{value}</div>
+    {sub && <div style={{ fontSize: 11, color: color || C.textMid, marginTop: 4, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+      {trend === "up" && <span style={{ color: C.green }}>↑</span>}
+      {trend === "down" && <span style={{ color: C.red }}>↓</span>}
+      {trend === "flat" && <span style={{ color: C.amber }}>→</span>}
+      {sub}
+    </div>}
+  </div>
+);
+
+const SectionHead = ({ title, sub, tag, t: _t }) => {
+  // If t function provided, titles are already translated by caller
+  return (
+  <div style={{ marginBottom: 28 }}>
+    {tag && <div style={{ fontSize: 11, color: C.copper, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>{tag}</div>}
+    <h2 style={{ fontSize: 30, fontWeight: 800, color: C.navy, margin: 0, fontFamily: "'Playfair Display', 'Georgia', serif", lineHeight: 1.15, letterSpacing: -0.5 }}>{title}</h2>
+    {sub && <p style={{ fontSize: 14, color: C.textLight, margin: "8px 0 0 0", lineHeight: 1.5 }}>{sub}</p>}
+  </div>
+);
+};
+
+const Tag = ({ children, color, filled }) => (
+  <span style={{
+    display: "inline-block",
+    padding: "3px 10px",
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: 700,
+    background: filled ? color : `${color}15`,
+    color: filled ? "#FFF" : color,
+    letterSpacing: 0.3,
+    lineHeight: 1.4,
+  }}>{children}</span>
+);
+
+const InfoBox = ({ title, children, color, icon }) => (
+  <div style={{
+    background: `linear-gradient(135deg, ${color || C.navy}, ${color || C.navyLight})`,
+    borderRadius: 14,
+    padding: 24,
+    color: "#FFF",
+  }}>
+    <h3 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 10px 0", display: "flex", alignItems: "center", gap: 8 }}>
+      {icon && <span>{icon}</span>}{title}
+    </h3>
+    <div style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.9 }}>{children}</div>
+  </div>
+);
+
+const CompactTable = ({ headers, rows, highlightCol }) => (
+  <div style={{ overflowX: "auto" }}>
+    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <thead>
+        <tr style={{ borderBottom: `2px solid ${C.border}` }}>
+          {headers.map((h, i) => (
+            <th key={i} style={{ textAlign: "left", padding: "10px 12px", color: C.textLight, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, ri) => (
+          <tr key={ri} style={{ borderBottom: `1px solid ${C.borderLight}`, transition: "background 0.15s" }}>
+            {row.map((cell, ci) => (
+              <td key={ci} style={{
+                padding: "10px 12px",
+                fontWeight: ci === 0 ? 600 : 400,
+                color: ci === 0 ? C.text : C.textMid,
+                fontFamily: ci === highlightCol ? "'Playfair Display', 'Georgia', serif" : "inherit",
+                ...(typeof cell === "object" ? {} : {}),
+              }}>{cell}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const ProgressBar = ({ value, max, color, label }) => (
+  <div style={{ marginBottom: 10 }}>
+    {label && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+      <span style={{ fontSize: 11, color: C.textMid, fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 11, color: color || C.copper, fontWeight: 700 }}>{value}%</span>
+    </div>}
+    <div style={{ height: 6, borderRadius: 3, background: C.borderLight }}>
+      <div style={{ height: "100%", borderRadius: 3, background: color || C.copper, width: `${Math.min(100, (value / (max || 100)) * 100)}%`, transition: "width 0.8s ease" }} />
+    </div>
+  </div>
+);
+
+const Grid = ({ cols, gap, children, style }) => (
+  <div style={{ display: "grid", gridTemplateColumns: cols || "1fr 1fr", gap: gap || 20, ...style }}>{children}</div>
+);
+
+// ═══════════════════════════════════════════
+// PAGE: COVER
+// ═══════════════════════════════════════════
+function CoverPage({ lang, onStart }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  const [show, setShow] = useState(false);
+  useEffect(() => { setTimeout(() => setShow(true), 150); }, []);
+
+  const kpis = [
+    { v: "104 T€", l: t("Betriebsergebnis Q1","Operating Result Q1"), sub: t("VJ nur 8 T€","PY only 8 k€") },
+    { v: "67%", l: t("Rohertragsmarge Q1","Gross Margin Q1"), sub: t("Branchenspitze","Industry leading") },
+    { v: "89%", l: t("Eigenkapitalquote","Equity Ratio"), sub: t("Kerngesund","Healthy") },
+    { v: "~24%", l: t("Exportquote Q1","Export Ratio Q1"), sub: t("Ziel 20% erreicht","Target 20% reached") },
+  ];
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: `linear-gradient(155deg, #080F1A 0%, ${C.navy} 40%, ${C.navyLight} 75%, #1A4C7A 100%)`,
+      display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+      position: "relative", overflow: "hidden", padding: 40,
+    }}>
+      {/* Subtle pattern overlay */}
+      <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+      {/* Gradient orbs */}
+      <div style={{ position: "absolute", top: "10%", right: "15%", width: 400, height: 400, borderRadius: "50%", background: `radial-gradient(circle, ${C.copper}15, transparent 70%)`, filter: "blur(60px)" }} />
+      <div style={{ position: "absolute", bottom: "15%", left: "10%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.08), transparent 70%)", filter: "blur(50px)" }} />
+
+      <div style={{
+        opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(40px)",
+        transition: "all 1.2s cubic-bezier(0.22, 1, 0.36, 1)", textAlign: "center", position: "relative", zIndex: 1,
+        maxWidth: 800,
+      }}>
+        <div style={{ fontSize: 12, color: C.copper, letterSpacing: 5, textTransform: "uppercase", marginBottom: 28, fontWeight: 600 }}>
+          {t("Wachstum · Lager-Fokus · Neue Märkte · starkes Team","Growth · Stock Focus · New Markets · Strong Team")}
+        </div>
+
+        <h1 style={{
+          fontSize: 72, fontWeight: 900, color: "#FFFFFF", margin: 0,
+          fontFamily: "'Playfair Display', 'Georgia', serif", lineHeight: 1.05, letterSpacing: -2,
+        }}>
+          TEA <span style={{ color: C.copper }}>2026</span>
+        </h1>
+
+        <div style={{ width: 60, height: 3, background: `linear-gradient(90deg, ${C.copper}, ${C.gold})`, margin: "24px auto", borderRadius: 2 }} />
+
+        <p style={{ fontSize: 17, color: "rgba(255,255,255,0.55)", maxWidth: 520, lineHeight: 1.7, margin: "0 auto" }}>
+          Technische Antriebselemente GmbH<br />
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", fontStyle: "italic" }}>{t("Driven by eMotion — seit 1964, Hamburg","Driven by eMotion — since 1964, Hamburg")}</span>
+        </p>
+
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginTop: 48,
+        }}>
+          {kpis.map((d, i) => (
+            <div key={i} style={{
+              opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(25px)",
+              transition: `all 0.9s cubic-bezier(0.22, 1, 0.36, 1) ${0.4 + i * 0.12}s`,
+              background: "rgba(255,255,255,0.04)", borderRadius: 14, padding: "20px 16px",
+              border: "1px solid rgba(255,255,255,0.06)",
+              backdropFilter: "blur(12px)",
+            }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: "#FFF", fontFamily: "'Playfair Display', 'Georgia', serif", lineHeight: 1.1 }}>{d.v}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 6, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 600 }}>{d.l}</div>
+              <div style={{ fontSize: 10, color: C.copper, marginTop: 3, fontWeight: 600 }}>{d.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onStart} style={{
+          marginTop: 52, background: `linear-gradient(135deg, ${C.copper}, ${C.copperLight})`,
+          color: "#FFF", border: "none", borderRadius: 30, padding: "16px 44px",
+          fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: 0.8,
+          boxShadow: `0 4px 24px ${C.copperGlow}`,
+          transition: "transform 0.2s, box-shadow 0.2s",
+        }}>
+          {t("Strategieplan öffnen →","Open Strategy Plan →")}
+        </button>
+
+        <div style={{ marginTop: 40, fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: 1 }}>
+          {t("Stand: Juni 2026 · Für: das Team von TEA · Planung 2026/27","As of: June 2026 · For: the TEA team · Plan 2026/27")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: EXECUTIVE SUMMARY
+// ═══════════════════════════════════════════
+function SummaryPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("Unser Fahrplan 2026/27","OUR ROADMAP 2026/27")}
+        title={t("Wohin die Reise geht","Where We Are Heading")}
+        sub={t("Die ersten 6 Monate 2026 sind geschafft — und sie liefen stark. Hier die wichtigsten Fakten auf einen Blick.","The first 6 months of 2026 are done — and they went strong. Here are the key facts at a glance.")}
+      />
+
+      {/* Traffic light overview */}
+      <Grid cols="repeat(6, 1fr)" gap={12} style={{ marginBottom: 28 }}>
+        {[
+          { label: t("Ergebnis Q1","Result Q1"), status: "green", value: "104 T€" },
+          { label: t("Rohertrag Q1","Gross Margin Q1"), status: "green", value: "67%" },
+          { label: t("Exportquote Q1","Export Q1"), status: "green", value: "~24%" },
+          { label: t("Eigenkapital","Equity Ratio"), status: "green", value: "89%" },
+          { label: t("Lager-Fokus","Stock Focus"), status: "amber", value: t("Aufbau","Build-up") },
+          { label: t("Team","Team"), status: "green", value: t("Bereit!","Ready!") },
+        ].map((item, i) => (
+          <div key={i} style={{
+            background: C.card, borderRadius: 10, padding: "14px 12px", textAlign: "center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            borderBottom: `3px solid ${item.status === "green" ? C.green : item.status === "amber" ? C.amber : C.red}`,
+          }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: item.status === "green" ? C.green : item.status === "amber" ? C.amber : C.red, margin: "0 auto 8px" }} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.text, fontFamily: "'Playfair Display', 'Georgia', serif" }}>{item.value}</div>
+            <div style={{ fontSize: 10, color: C.textLight, marginTop: 3, fontWeight: 600, letterSpacing: 0.3, textTransform: "uppercase" }}>{item.label}</div>
+          </div>
+        ))}
+      </Grid>
+
+      <Grid cols="3fr 2fr" gap={24} style={{ marginBottom: 24 }}>
+        {/* Key message */}
+        <Card accent={C.navy}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Stark gestartet — jetzt das Fundament für 2027 legen","Strong Start — Now Build the Foundation for 2027")}</h3>
+          <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 10px 0" }}>
+              {t("Das erste Halbjahr 2026 lief deutlich besser als das Vorjahr: ","The first half of 2026 went significantly better than the previous year: ")}<strong style={{ color: C.text }}>{t("Betriebsergebnis und Rohertrag klar im Plus, Eigenkapitalquote bei 89%","operating result and gross margin clearly up, equity ratio at 89%")}</strong>{t(". TEA steht kerngesund da — trotz schwachem Maschinenbau und unsicherem Marktumfeld.",". TEA is in a fundamentally healthy position — despite weak machinery demand and an uncertain market.")}
+            </p>
+            <p style={{ margin: "0 0 10px 0" }}>
+              <strong style={{ color: C.text }}>{t("Unsere Stärke: 60 Jahre Expertise + ein breites Programm.","Our strength: 60 years of expertise + a broad range.")}</strong> {t("Wir nutzen das Polster, um gezielt in Wachstum zu investieren: neue Märkte (AT/CH/NL), ein fokussiertes Lager und KI-gestützte Prozesse.","We use that cushion to invest deliberately in growth: new markets (AT/CH/NL), a focused inventory and AI-supported processes.")}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: C.copper }}>{t("Die Vision:","The Vision:")}</strong> {t("TEA wird der schnelle, verlässliche Antriebstechnik-Partner im DACH-Raum. Den Robotik-Markt beobachten wir aufmerksam — und bestellen bei Bedarf erste Muster.","TEA becomes the fast, reliable drive technology partner in the DACH region. We watch the robotics market closely — and order first samples when it makes sense.")}
+            </p>
+          </div>
+        </Card>
+
+        {/* Quick numbers + risks */}
+        <div>
+          <Card style={{ marginBottom: 12 }} accent={C.green}>
+            <h4 style={{ fontSize: 12, color: C.textLight, margin: "0 0 10px 0", letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 }}>{t("Ziele 2026/27 — Kurzfassung","Goals 2026/27 — Summary")}</h4>
+            {[
+              { k: t("Umsatz","Revenue"), v: "≥ 2.250 T€", delta: "+10%" },
+              { k: t("Rohertragsmarge","Gross Margin"), v: "≥ 60%", delta: t("halten","hold") },
+              { k: t("Exportquote","Export Ratio"), v: "≥ 20%", delta: t("Q1 ~24% ✓","Q1 ~24% ✓") },
+              { k: t("Neukunden","New Customers"), v: "≥ 30", delta: "DACH" },
+              { k: t("Lager-Fokusprodukte","Focus Stock"), v: t("ab Lager","ex stock"), delta: t("48h-Lieferung","48h delivery") },
+            ].map((z, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < 4 ? `1px solid ${C.borderLight}` : "none" }}>
+                <span style={{ fontSize: 12, color: C.textMid }}>{z.k}</span>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{z.v}</span>
+                  <span style={{ fontSize: 10, color: C.green, marginLeft: 8, fontWeight: 600 }}>{z.delta}</span>
+                </div>
+              </div>
+            ))}
+          </Card>
+
+          <Card accent={C.red}>
+            <h4 style={{ fontSize: 12, color: C.textLight, margin: "0 0 8px 0", letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 }}>{t("Top-3 Risiken","Top 3 Risks")}</h4>
+            {[
+              { r: t("Geopolitik: Lieferketten & Preise","Geopolitics: supply chains & prices"), s: t("HOCH","HIGH") },
+              { r: t("Maschinenbaukrise hält an","Machinery crisis persists"), s: t("MITTEL","MEDIUM") },
+              { r: t("China-/Plattform-Preisdruck","China / platform price pressure"), s: t("MITTEL","MEDIUM") },
+            ].map((r, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < 2 ? `1px solid ${C.borderLight}` : "none" }}>
+                <span style={{ fontSize: 11, color: C.textMid }}>{r.r}</span>
+                <Tag color={r.s === "HOCH" ? C.red : C.amber}>{r.s}</Tag>
+              </div>
+            ))}
+          </Card>
+        </div>
+      </Grid>
+
+      {/* Strategic pillars */}
+      <Grid cols="repeat(4, 1fr)" gap={16} style={{ marginBottom: 24 }}>
+        {[
+          { icon: "🌍", title: t("Internationalisierung","Internationalization"), target: t("Export ≥ 20% halten","Hold export ≥ 20%"), actions: t("AT/CH Direktvertrieb, NL/BE Partner, Website EN","AT/CH direct sales, NL/BE partners, website EN"), color: C.blue },
+          { icon: "📦", title: t("Lager & Fokusprodukte","Stock & Focus Products"), target: t("LinRol · Magnet · Verzahnung","LinRol · Magnetic · Gearing"), actions: t("Alte Bestände abbauen, Fokusprodukte ab Lager liefern, auf Homepage & SEA pushen","Reduce old stock, deliver focus products ex stock, push on homepage & SEA"), color: C.teal },
+          { icon: "🔍", title: t("Robotik beobachten","Watch Robotics"), target: t("Markt beobachten, ggf. Muster","Watch market, samples if needed"), actions: t("Trends verfolgen, Lasergravurmaschine angestoßen, bei Bedarf Muster bestellen","Track trends, laser engraver initiated, order samples if needed"), color: C.copper },
+          { icon: "⚡", title: t("KI & Prozesse","AI & Processes"), target: t("Schneller, weniger Routine","Faster, less routine"), actions: t("KI-Auftragsabwicklung, Vorlagen, Chatbot — Schritt für Schritt","AI order processing, templates, chatbot — step by step"), color: C.navy },
+        ].map((p, i) => (
+          <Card key={i} accent={p.color}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>{p.icon}</div>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: "0 0 6px 0" }}>{p.title}</h4>
+            <div style={{ fontSize: 12, color: p.color, fontWeight: 700, marginBottom: 10 }}>{p.target}</div>
+            <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.6 }}>{p.actions}</div>
+          </Card>
+        ))}
+      </Grid>
+
+      {/* WAS BEDEUTET DAS FÜR MICH — Team-Perspektive */}
+      <Card style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Was bedeutet das für jeden von uns?","What Does This Mean for Each of Us?")}</h3>
+        <Grid cols="repeat(3, 1fr)" gap={12}>
+          {[
+            { role: t("Vertrieb (Marcel, Alex O.)","Sales (Marcel, Alex O.)"), change: t("Neue Märkte AT/CH erschließen, internationale Anfragen bearbeiten, Fokusprodukte aktiv anbieten","Open new markets AT/CH, handle international inquiries, actively offer focus products"), newSkills: t("Exportabwicklung, technische Beratung, englischsprachige Kommunikation","Export processing, technical consulting, English communication"), icon: "🎯" },
+            { role: "Marketing & Digital (Martin)", change: t("Fokusprodukte auf Homepage & SEA pushen, KI-Chatbot aufbauen, Produktkonfigurator entwickeln","Push focus products on homepage & SEA, build AI chatbot, develop product configurator"), newSkills: t("SEA/SEO, KI-Tool-Administration, Content-Produktion","SEA/SEO, AI tool admin, content production"), icon: "🚀" },
+            { role: t("Einkauf & IT (Thomas, Stefan)","Purchasing & IT (Thomas, Stefan)"), change: t("Dual Sourcing aufbauen, EU-Lieferanten qualifizieren, Fokusprodukte bevorraten","Build dual sourcing, qualify EU suppliers, stock focus products"), newSkills: t("Internationales Lieferantenmanagement, Preisgleitklauseln, Nahost-Monitoring","International supplier management, price escalation clauses, Middle East monitoring"), icon: "🔧" },
+            { role: t("Buchhaltung (Helge, Marion)","Accounting (Helge, Marion)"), change: t("Saubere, schnelle Monatsabschlüsse; KI nimmt Routinebuchungen ab","Clean, fast monthly closings; AI takes over routine bookings"), newSkills: t("Digitale Belegworkflows, KI-Unterstützung im Tagesgeschäft","Digital document workflows, AI support in daily work"), icon: "📊" },
+            { role: t("Lager (Alex G., Benni)","Warehouse (Alex G., Benni)"), change: t("Fokusprodukte ab Lager kommissionieren, 48h-Lieferversprechen umsetzen, alte Bestände abbauen","Pick focus products ex stock, deliver on 48h promise, reduce old stock"), newSkills: t("Bestandsoptimierung, schnelle Kommissionierung, Verpackungsstandards INT","Inventory optimization, fast picking, international packaging standards"), icon: "📦" },
+            { role: t("Strategie (Sebastian)","Strategy (Sebastian)"), change: t("KI-Projekte leiten, internationale Expansion steuern, Robotik-Markt beobachten","Lead AI projects, steer international expansion, watch the robotics market"), newSkills: t("KI-Projektmanagement, internationale Vertriebssteuerung","AI project management, international sales steering"), icon: "⚡" },
+          ].map((r, i) => (
+            <div key={i} style={{ padding: 12, borderRadius: 10, border: `1px solid ${C.border}`, background: `${C.bg}` }}>
+              <div style={{ fontSize: 20, marginBottom: 4 }}>{r.icon}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 4 }}>{r.role}</div>
+              <div style={{ fontSize: 10, color: C.text, lineHeight: 1.5, marginBottom: 6 }}>{r.change}</div>
+              <div style={{ fontSize: 9, color: C.teal, fontWeight: 600 }}>{t("Neue Skills:","New Skills:")} {r.newSkills}</div>
+            </div>
+          ))}
+        </Grid>
+      </Card>
+
+      {/* DAS HABEN WIR IN H1 2026 GESCHAFFT */}
+      <Card style={{ marginBottom: 24 }} accent={C.green}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.green, margin: "0 0 14px 0" }}>{t("✓ Das haben wir in H1 2026 geschafft","✓ What We Achieved in H1 2026")}</h3>
+        <Grid cols="repeat(3, 1fr)" gap={12}>
+          {[
+            { t: t("Budgetfreigabe erteilt","Budget approved"), d: t("Mittel für die Wachstumsmaßnahmen 2026 sind freigegeben.","Funds for the 2026 growth measures are approved."), done: true },
+            { t: t("ISO-Zertifizierung","ISO certification"), d: t("Türöffner bei internationalen und größeren Kunden.","Door opener with international and larger customers."), done: true },
+            { t: t("KI-Projekte gestartet (Vertrieb)","AI projects started (sales)"), d: t("Erste KI-Maßnahmen im Vertrieb sind angelaufen.","First AI measures in sales have started."), done: true },
+            { t: t("Robotik-Markt: Beobachtung gestartet","Robotics market: monitoring started"), d: t("Markt wird beobachtet, Muster-Bestellung bei Bedarf.","Market is being watched, sample order if needed."), done: true },
+            { t: t("Lasergravurmaschine angestoßen","Laser engraver initiated"), d: t("Beschaffung in Prüfung — eigene Kennzeichnung & Mehrwert.","Procurement under review — own marking & added value."), done: true },
+            { t: t("Lageraufbau Fokusprodukte","Stock build-up focus products"), d: t("Alte Bestände werden abgebaut, neue Fokusbestände aufgebaut.","Old stock being reduced, new focus stock built up."), done: true },
+          ].map((q, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: 10, borderRadius: 8, background: `${C.green}06` }}>
+              <div style={{ width: 18, height: 18, borderRadius: 5, background: C.green, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0, marginTop: 1 }}>✓</div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{q.t}</div>
+                <div style={{ fontSize: 10.5, color: C.textLight, lineHeight: 1.5 }}>{q.d}</div>
+              </div>
+            </div>
+          ))}
+        </Grid>
+      </Card>
+
+      <InfoBox title={t("Fokus 2. Halbjahr: Lager & Sichtbarkeit","Focus H2: Stock & Visibility")} color={C.navy} icon="📦">
+        <p style={{ margin: 0 }}>
+          {t("Wir bauen alte Lagerbestände ab und investieren in die Fokusprodukte LinRol, Magnetkupplungen und Verzahnungsteile — ab Lager lieferbar in 48 Stunden. Genau diese Produkte stellen wir auf der neuen Homepage in den Mittelpunkt und pushen sie über unser SEA-Budget (Google Ads). So machen wir aus unserem Lager einen Vertriebsvorteil.","We are reducing old stock and investing in our focus products LinRol, magnetic couplings and gearing parts — deliverable ex stock within 48 hours. These are exactly the products we put center stage on the new homepage and push via our SEA budget (Google Ads). That turns our inventory into a sales advantage.")}
+        </p>
+      </InfoBox>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: FINANCIAL STATUS
+// ═══════════════════════════════════════════
+function FinancePage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("GESCHÄFTSENTWICKLUNG","BUSINESS PERFORMANCE")}
+        title={t("Geschäftsentwicklung & Finanzlage","Business Performance & Financial Position")}
+        sub={t("BWA Q1 2026 · Zwischenbilanz 31.03.2026 · 10-Jahres-Vergleich","BWA Q1 2026 · Balance Sheet 31.03.2026 · 10-Year Comparison")}
+      />
+
+      <Grid cols="repeat(4, 1fr)" gap={14} style={{ marginBottom: 16 }}>
+        <Metric label={t("Umsatz Q1 '26","Revenue Q1 '26")} value="518 T€" sub={t("−5,6% z. VJ (Markt)","−5.6% vs. PY (market)")} color={C.amber} trend="flat" />
+        <Metric label={t("Rohertrag Q1","Gross Margin Q1")} value="67,1%" sub={t("VJ 60,1% — top","PY 60.1% — top")} color={C.green} trend="up" />
+        <Metric label={t("Betriebsergebnis Q1","Operating Result Q1")} value="104 T€" sub={t("VJ nur 8 T€","PY only 8 k€")} color={C.green} trend="up" />
+        <Metric label={t("Jahresüberschuss Q1","Net Income Q1")} value="115 T€" sub={t("VJ 9 T€ — starker Start","PY 9 k€ — strong start")} color={C.green} trend="up" />
+      </Grid>
+
+      <Grid cols="repeat(4, 1fr)" gap={14} style={{ marginBottom: 28 }}>
+        <Metric label={t("Eigenkapitalquote","Equity Ratio")} value="89%" sub={t("Kerngesund","Fundamentally healthy")} color={C.navy} small />
+        <Metric label={t("Exportquote Q1","Export Ratio Q1")} value="~24%" sub={t("Ziel 20% erreicht","Target 20% reached")} color={C.green} trend="up" small />
+        <Metric label={t("Lagerbestand","Inventory")} value="492 T€" sub={t("+54 T€ Fokus-Aufbau","+54 k€ focus build-up")} color={C.teal} trend="up" small />
+        <Metric label={t("Materialquote Q1","Material Ratio Q1")} value="32,9%" sub={t("VJ 41,0% — besser","PY 41.0% — better")} color={C.green} trend="up" small />
+      </Grid>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 24 }}>
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 16px 0" }}>{t("Monatsumsatz 2025 – Q1 2026 (T€)","Monthly Revenue 2025 – Q1 2026 (k€)")}</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <ComposedChart data={monthlyBWA2025}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+              <XAxis dataKey="mon" tick={{ fontSize: 10, fill: C.textLight }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 10, fill: C.textLight }} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+              <Bar yAxisId="left" dataKey="umsatz" fill={C.navy} radius={[4, 4, 0, 0]} name={t("Umsatz T€","Revenue k€")} opacity={0.85} />
+              <Line dataKey="ergebnis" stroke={C.copper} strokeWidth={2} name={t("Ergebnis T€","Result k€")} />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <div style={{ textAlign: "center", marginTop: 4 }}>
+            <Tag color={C.green}>{t("März '26: 203 T€ Umsatz, 89 T€ Ergebnis","Mar '26: 203 k€ rev., 89 k€ result")}</Tag>
+          </div>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 16px 0" }}>{t("10-Jahres-Umsatz + Rohertrag (T€)","10-Year Revenue + Gross Profit (k€)")}</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={revenueHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+              <XAxis dataKey="year" tick={{ fontSize: 10, fill: C.textLight }} />
+              <YAxis tick={{ fontSize: 10, fill: C.textLight }} domain={[1500, 3000]} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+              <Area type="monotone" dataKey="umsatz" stroke={C.navy} fill={`${C.navy}15`} strokeWidth={2} name={t("Umsatz T€","Revenue k€")} />
+              <Area type="monotone" dataKey="rohertrag" stroke={C.green} fill={`${C.green}10`} strokeWidth={1.5} name={t("Rohertrag T€","Gross Profit k€")} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+      </Grid>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 24 }}>
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 16px 0" }}>{t("Szenario-Planung 2026–2028 (T€)","Scenario Planning 2026–2028 (k€)")}</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={revenueForecast}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+              <XAxis dataKey="year" tick={{ fontSize: 10, fill: C.textLight }} />
+              <YAxis tick={{ fontSize: 10, fill: C.textLight }} domain={[1800, 3600]} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+              <Line type="monotone" dataKey="pessimist" stroke={C.red} strokeWidth={1.5} strokeDasharray="5 5" name={t("Pessimistisch","Pessimistic")} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="basis" stroke={C.copper} strokeWidth={2.5} name={t("Basis-Szenario","Base Scenario")} dot={{ r: 4, fill: C.copper }} />
+              <Line type="monotone" dataKey="optimist" stroke={C.green} strokeWidth={1.5} strokeDasharray="5 5" name={t("Optimistisch","Optimistic")} dot={{ r: 3 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 16px 0" }}>{t("Umsatzverteilung Q1 '26","Revenue Split Q1 '26")}</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <PieChart>
+              <Pie data={exportData.map(e=>({...e, name: lang==="en"?e.nameEn:e.name}))} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={70} label={({ name, value }) => `${name} ${value}%`} labelLine={{ strokeWidth: 1 }}>
+                {exportData.map((e, i) => <Cell key={i} fill={e.color} />)}
+              </Pie>
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div style={{ textAlign: "center", marginTop: 4 }}>
+            <Tag color={C.green}>{t("Exportquote Q1 ~24% — Ziel 20% erreicht","Export ratio Q1 ~24% — target 20% reached")}</Tag>
+          </div>
+        </Card>
+      </Grid>
+
+      {/* Financial strength assessment */}
+      <Grid cols="1fr 1fr" gap={20}>
+        <Card accent={C.green}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.green, margin: "0 0 14px 0" }}>{t("✓ Unsere Stärken","✓ Our Strengths")}</h3>
+          {[
+            { t: t("Starkes Q1 2026","Strong Q1 2026"), d: t("Ergebnis und Rohertrag deutlich über Vorjahr. Das gibt Rückenwind für Investitionen.","Result and gross margin clearly above last year. That gives momentum for investments.") },
+            { t: t("Eigenkapitalquote 89%","Equity Ratio 89%"), d: t("Kerngesunde Bilanz, kaum Bankschulden. TEA kann aus eigener Kraft investieren.","Fundamentally healthy balance sheet, almost no bank debt. TEA can invest from its own strength.") },
+            { t: t("Wachstumsprodukte +242%","Growth Products +242%"), d: t("Verzahnung non-standard und Servomotoren wachsen stark. Innovation zahlt sich aus.","Non-standard gearing and servo motors growing strongly. Innovation pays off.") },
+            { t: t("Breites Portfolio, 60+ Jahre","Broad Portfolio, 60+ Years"), d: t("11+ Warengruppen, tiefes Know-how, persönlicher Service — schwer kopierbar.","11+ product groups, deep know-how, personal service — hard to copy.") },
+          ].map((s, i) => (
+            <div key={i} style={{ marginBottom: 10, paddingLeft: 14, borderLeft: `2px solid ${C.green}30` }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{s.t}</div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{s.d}</div>
+            </div>
+          ))}
+        </Card>
+
+        <Card accent={C.amber}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.amber, margin: "0 0 14px 0" }}>{t("⚠ Handlungsfelder","⚠ Action Areas")}</h3>
+          {[
+            { t: t("Umsatz leicht rückläufig (−5,6%)","Revenue slightly down (−5.6%)"), d: t("Marktbedingt (Maschinenbaukrise). Antwort: neue Märkte, neue Kunden, mehr Sichtbarkeit.","Market-driven (machinery crisis). Answer: new markets, new customers, more visibility.") },
+            { t: t("Lager fokussieren","Focus the Inventory"), d: t("Alte, langsame Bestände abbauen — neue Fokusbestände (LinRol, Magnet, Verzahnung) aufbauen.","Reduce old, slow stock — build new focus stock (LinRol, magnetic, gearing).") },
+            { t: t("Sichtbarkeit ausbauen","Expand Visibility"), d: t("Fokusprodukte auf der neuen Homepage zeigen und über SEA-Budget pushen.","Show focus products on the new homepage and push them via SEA budget.") },
+            { t: t("Nahost-Krise (Materialpreise)","Middle East Crisis (Material Prices)"), d: t("Steigende Stahl-/Alupreise, gestörte Lieferketten. EU-Sourcing und Preisgleitklauseln priorisieren.","Rising steel/aluminum prices, disrupted supply chains. Prioritize EU sourcing and price escalation clauses.") },
+          ].map((s, i) => (
+            <div key={i} style={{ marginBottom: 10, paddingLeft: 14, borderLeft: `2px solid ${C.amber}30` }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{s.t}</div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{s.d}</div>
+            </div>
+          ))}
+        </Card>
+      </Grid>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: MARKET & COMPETITION
+// ═══════════════════════════════════════════
+function MarketPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("Marktanalyse","MARKET ANALYSIS")}
+        title={t("Markt & Wettbewerb — kompakt","Market & Competition — Compact")}
+        sub={t("Die ersten 6 Monate 2026 sind geschafft. Hier nur das Wichtigste.","The first 6 months of 2026 are done. Here is just the essentials.")}
+      />
+
+      <Grid cols="repeat(4, 1fr)" gap={12} style={{ marginBottom: 24 }}>
+        <Metric label={t("Maschinenbau DE","Machinery DE")} value="+1%" sub={t("VDMA-Prognose '26","VDMA forecast '26")} color={C.amber} trend="flat" small />
+        <Metric label={t("Nahost-Krise","Middle East Crisis")} value={t("Akut","Acute")} sub={t("Lieferketten + Preise ↑","Supply chains + prices ↑")} color={C.red} trend="down" small />
+        <Metric label={t("Robotik global","Robotics global")} value="+9,4%" sub={t("Wir beobachten","We watch")} color={C.green} trend="up" small />
+        <Metric label="Nearshoring" value="+15%" sub={t("Produktion zurück in EU","Production back to EU")} color={C.teal} trend="up" small />
+      </Grid>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 20 }}>
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 12px 0" }}>{t("Marktlage in Kürze","Market Situation in Brief")}</h3>
+          <div style={{ fontSize: 12.5, color: C.textMid, lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 8px 0" }}>
+              {t("Der deutsche Maschinenbau ist im ","German machinery is in its ")}<strong style={{ color: C.text }}>{t("4. Krisenjahr","4th crisis year")}</strong>{t(", die VDMA-Prognose 2026 liegt bei bestenfalls +1%. Die Nahost-Krise treibt zusätzlich Material- und Energiepreise.",", the VDMA forecast for 2026 is +1% at best. The Middle East crisis additionally drives up material and energy prices.")}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: C.copper }}>{t("Für uns heißt das:","For us that means:")}</strong> {t("Nicht auf Erholung warten, sondern proaktiv neue Märkte (AT/CH/NL) erschließen, Fokusprodukte sichtbar machen und EU-Sourcing stärken.","Don't wait for recovery — proactively open new markets (AT/CH/NL), make focus products visible and strengthen EU sourcing.")}
+            </p>
+          </div>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 12px 0" }}>{t("Wo TEA punktet","Where TEA Wins")}</h3>
+          {[
+            { n: t("vs. Große (Bosch Rexroth, Schaeffler)","vs. Large players"), pos: t("Schneller, flexibler, persönlicher.","Faster, more flexible, more personal."), color: C.blue },
+            { n: "vs. China (Hiwin, TBI, PMI)", pos: t("Lokale Präsenz, schnelle Lieferung, Beratung, Qualität.","Local presence, fast delivery, consulting, quality."), color: C.red },
+            { n: t("TEAs Alleinstellung","TEA's USP"), pos: t("Breitestes Programm im Mittelstand + Custom & Service.","Broadest range in the SME sector + custom & service."), color: C.green },
+          ].map((c, i) => (
+            <div key={i} style={{ padding: 9, borderRadius: 8, borderLeft: `3px solid ${c.color}`, background: `${c.color}06`, marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: c.color, marginBottom: 2 }}>{c.n}</div>
+              <div style={{ fontSize: 11, color: C.textMid, lineHeight: 1.5 }}>{c.pos}</div>
+            </div>
+          ))}
+        </Card>
+      </Grid>
+
+      <Card>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.navy, margin: "0 0 12px 0" }}>{t("Rückenwind-Trends für TEA","Tailwind Trends for TEA")}</h3>
+        <Grid cols="repeat(4, 1fr)" gap={12}>
+          {[
+            { icon: "👷", title: t("Fachkräftemangel","Labor Shortage"), desc: t("Kunden müssen automatisieren → mehr Bedarf an Antriebstechnik.","Customers must automate → more demand for drive tech."), growth: t("strukturell","structural") },
+            { icon: "🏭", title: "Nearshoring", desc: t("Produktion kehrt nach Europa zurück → Zulieferer wie TEA gefragt.","Production returns to Europe → suppliers like TEA in demand."), growth: "+15%/a EU" },
+            { icon: "🤖", title: t("Robotik & Cobots","Robotics & Cobots"), desc: t("Wachsender Markt — wir beobachten und bestellen bei Bedarf Muster.","Growing market — we watch and order samples if needed."), growth: "+9,4%/a" },
+            { icon: "🌱", title: "Green-Tech", desc: t("Batterie, Wasserstoff, Wärmepumpen — brauchen Lineartechnik.","Battery, hydrogen, heat pumps — need linear technology."), growth: "+22%/a" },
+          ].map((mt, i) => (
+            <div key={i} style={{ textAlign: "center", padding: 10, borderRadius: 8, background: `${C.bg}` }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{mt.icon}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, marginBottom: 4 }}>{mt.title}</div>
+              <Tag color={C.green}>{mt.growth}</Tag>
+              <div style={{ fontSize: 10.5, color: C.textLight, lineHeight: 1.5, marginTop: 6 }}>{mt.desc}</div>
+            </div>
+          ))}
+        </Grid>
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: PRODUCT PORTFOLIO
+// ═══════════════════════════════════════════
+function ProductsPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("Produktanalyse","PRODUCT ANALYSIS")}
+        title={t("Produkte & Lager — Fokus 2026/27","Products & Stock — Focus 2026/27")}
+        sub={t("10-Jahres-Warengruppen-Analyse 2016–2025 · BCG-Matrix · Fokusempfehlungen","10-Year Product Analysis 2016–2025 · BCG Matrix · Focus Recommendations")}
+      />
+
+      {/* BCG Matrix visual */}
+      <Card style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Strategische Produktbewertung (BCG-Matrix-Logik)","Strategic Product Assessment (BCG Matrix)")}</h3>
+        <p style={{ fontSize: 11, color: C.textLight, margin: "0 0 16px 0" }}>{t("X-Achse = Wachstum 5J (%) · Y-Achse = Umsatz 2025 (T€) · Blasengröße = Marge (%)","X = 5Y Growth (%) · Y = Revenue 2025 (k€) · Bubble = Margin (%)")}</p>
+        <ResponsiveContainer width="100%" height={300}>
+          <ScatterChart margin={{ top: 10, right: 30, bottom: 10, left: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+            <XAxis type="number" dataKey="x" name={t("Wachstum 5J (%)","5Y Growth (%)")} tick={{ fontSize: 10, fill: C.textLight }} label={{ value: t("Wachstum 5J (%)","5Y Growth (%)"), position: "bottom", style: { fontSize: 10, fill: C.textLight } }} />
+            <YAxis type="number" dataKey="y" name={t("Umsatz 2025 (T€)","Revenue 2025 (k€)")} tick={{ fontSize: 10, fill: C.textLight }} label={{ value: t("Umsatz T€","Revenue k€"), angle: -90, position: "insideLeft", style: { fontSize: 10, fill: C.textLight } }} />
+            <ZAxis type="number" dataKey="z" range={[80, 400]} name={t("Marge (%)","Margin (%)")} />
+            <Tooltip content={({ payload }) => {
+              if (!payload?.length) return null;
+              const d = payload[0].payload;
+              return (
+                <div style={{ background: "#FFF", border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, fontSize: 11, boxShadow: C.shadow }}>
+                  <div style={{ fontWeight: 700 }}>{d.name}</div>
+                  <div>{t("Umsatz:","Revenue:")} {d.y} T€</div>
+                  <div>{t("Wachstum:","Growth:")} {d.x > 0 ? "+" : ""}{d.x}%</div>
+                  <div>{t("Marge:","Margin:")} ~{d.z}%</div>
+                </div>
+              );
+            }} />
+            {/* Reference lines for quadrants */}
+            <Scatter data={bcgData.filter(d => d.quadrant === "star")} fill={C.green} name="Stars" />
+            <Scatter data={bcgData.filter(d => d.quadrant === "cash")} fill={C.blue} name="Cash Cows" />
+            <Scatter data={bcgData.filter(d => d.quadrant === "question")} fill={C.amber} name="Question Marks" />
+            <Scatter data={bcgData.filter(d => d.quadrant === "dog")} fill={C.red} name="Dogs" />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* Product table */}
+      <Card style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 16px 0" }}>{t("Top-11 Warengruppen nach Umsatz — Detailanalyse","Top 11 Products by Revenue — Analysis")}</h3>
+        <CompactTable
+          headers={[t("Warengruppe","Product Group"), t("Umsatz '25 (T€)","Rev. '25 (k€)"), t("Umsatz '20 (T€)","Rev. '20 (k€)"), t("Wachstum 5J","5Y Growth"), t("Marge","Margin"), t("BCG-Typ","BCG Type"), t("Empfehlung","Action")]}
+          rows={topProducts.map(p => [
+            p.name,
+            <span style={{ fontFamily: "'Playfair Display', 'Georgia', serif", fontWeight: 700 }}>{p.u2025}</span>,
+            <span style={{ color: C.textLight }}>{p.u2020}</span>,
+            <Tag color={p.growth > 50 ? C.green : p.growth > 0 ? C.teal : p.growth > -20 ? C.amber : C.red}>{p.growth > 0 ? "+" : ""}{p.growth}%</Tag>,
+            <span style={{ fontWeight: 600 }}>~{p.margin}%</span>,
+            <Tag color={p.quadrant === "star" ? C.green : p.quadrant === "cash" ? C.blue : p.quadrant === "question" ? C.amber : C.red} filled>
+              {p.quadrant === "star" ? "⭐ Star" : p.quadrant === "cash" ? "💰 Cash Cow" : p.quadrant === "question" ? "❓ Question" : "📉 Dog"}
+            </Tag>,
+            <span style={{ fontSize: 10, color: C.textMid }}>
+              {p.quadrant === "star" ? t("INVESTIEREN","INVEST") : p.quadrant === "cash" ? t("MARGE SICHERN","SECURE MARGIN") : p.quadrant === "question" ? t("ENTSCHEIDUNG Q3","DECIDE Q3") : t("AUSLAUFEN LASSEN","PHASE OUT")}
+            </span>,
+          ])}
+        />
+      </Card>
+
+      <Grid cols="1fr 1fr" gap={20}>
+        {/* Focus products */}
+        <Card accent={C.copper}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Produkt-Fokus 2026/27: Top 5","Product Focus 2026/27: Top 5")}</h3>
+          {[
+            { n: t("1. Verzahnung non-standard","1. Non-standard Gearing"), reason: t("Kernkompetenz mit +242% Wachstum und 72% Marge. Alleinstellungsmerkmal im Markt. Kapazität ausbauen, aktiv vermarkten.","Core competence with +242% growth and 72% margin. Unique selling point. Expand capacity, actively market."), action: t("AUSBAUEN","EXPAND"), color: C.green },
+            { n: t("2. Servo-/Schrittmotoren","2. Servo/Stepper Motors"), reason: t("Zukunftsprodukt für Robotik & Automation. +148% in 5 Jahren. Lager aufbauen, Robotik-Kunden ansprechen.","Future product for robotics & automation. +148% in 5 years. Build stock, approach robotics customers."), action: t("INVESTIEREN","INVEST"), color: C.green },
+            { n: t("3. LinRol Führungen","3. LinRol Guides"), reason: t("Stabiles Kerngeschäft mit 36% Wachstum. Standardgrößen ab Lager für 48h-Lieferung aufbauen.","Stable core business with 36% growth. Build standard sizes from stock for 48h delivery."), action: t("LAGER AUFBAUEN","BUILD STOCK"), color: C.blue },
+            { n: t("4. Kugelumlaufführungen","4. Ball Screw Guides"), reason: t("Wachstumsprodukt (+84% seit 2020). Ergänzung zum Linearprogramm. Cross-Selling-Potenzial.","Growth product (+84% since 2020). Complement to linear program. Cross-selling potential."), action: t("FÖRDERN","PROMOTE"), color: C.teal },
+            { n: t("5. Magnetkupplungen","5. Magnetic Couplings"), reason: t("Nische mit 68% Marge und stabilem Umsatz. Wenig Wettbewerb. Vertrieb intensivieren.","Niche with 68% margin and stable revenue. Little competition. Intensify sales."), action: t("VERTRIEB PUSH","SALES PUSH"), color: C.copper },
+          ].map((p, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 12, padding: 10, borderRadius: 8, background: `${p.color}06` }}>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: p.color, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{i + 1}</div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 2 }}>{p.n} <Tag color={p.color}>{p.action}</Tag></div>
+                <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.reason}</div>
+              </div>
+            </div>
+          ))}
+        </Card>
+
+        {/* Lager-Strategie */}
+        <Card accent={C.teal}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Lager-Strategie 2026/27: Alt abbauen, Fokus aufbauen","Inventory Strategy 2026/27: Reduce Old, Build Focus")}</h3>
+          <p style={{ fontSize: 11.5, color: C.textMid, lineHeight: 1.6, margin: "0 0 12px 0" }}>
+            {t("Lagerwert per 31.03.2026: ","Inventory value as of 31.03.2026: ")}<strong style={{ color: C.text }}>492 T€</strong> {t("(+54 T€ z. VJ). Wir schreiben alte, langsam drehende Bestände ab — und bauen gezielt margenstarke Fokusprodukte auf, die ab Lager in 48 h lieferbar sind.","(+54 k€ vs. PY). We write off old, slow-moving stock — and deliberately build up high-margin focus products, deliverable ex stock in 48 h.")}
+          </p>
+          {[
+            { n: "LinRol-Führungen", val: "~101 T€", desc: t("Größter Fokusbereich — Standardgrößen ab Lager für 48h-Lieferung.","Largest focus area — standard sizes ex stock for 48h delivery."), color: C.blue },
+            { n: t("Verzahnungsteile","Gearing Parts"), val: "~49 T€", desc: t("Wachstumskern (+242%) und höchste Marge — aktiv bevorraten.","Growth core (+242%) and highest margin — actively stock."), color: C.green },
+            { n: "Magnetkupplungen", val: "~11 T€", desc: t("Margenstarke Nische (68%), wenig Wettbewerb — Vertrieb pushen.","High-margin niche (68%), little competition — push sales."), color: C.copper },
+          ].map((p, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: 10, borderRadius: 8, background: `${p.color}06`, marginBottom: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{p.n}</div>
+                <div style={{ fontSize: 10.5, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+              </div>
+              <Tag color={p.color}>{p.val}</Tag>
+            </div>
+          ))}
+          <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: `${C.teal}08`, border: `1px solid ${C.teal}20` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.teal, marginBottom: 3 }}>{t("🔎 Sichtbarkeit: Homepage + SEA","🔎 Visibility: Homepage + SEA")}</div>
+            <div style={{ fontSize: 10.5, color: C.textMid, lineHeight: 1.5 }}>
+              {t("Genau diese Fokusprodukte stehen auf der neuen Startseite im Mittelpunkt und werden über das SEA-Budget (Google Ads) gepusht.","These focus products take center stage on the new homepage and are pushed via the SEA budget (Google Ads).")}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amber}20` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 3 }}>{t("⤵ Gegenstück: alte Bestände abbauen","⤵ Counterpart: reduce old stock")}</div>
+            <div style={{ fontSize: 10.5, color: C.textMid, lineHeight: 1.5 }}>
+              {t("Auslaufprodukte (z. B. Kegelrad-/Schneckengetriebe) im Abverkauf — bindet Kapital, das wir in die Fokusprodukte umlenken.","Phase-out products (e.g. bevel/worm gearboxes) on clearance — they tie up capital we redirect to focus products.")}
+            </div>
+          </div>
+        </Card>
+      </Grid>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginTop: 24 }}>
+        {/* Cash Cows: Wellengelenke & Kupplungen */}
+        <Card accent={C.blue}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Cash Cows: Wellengelenke & Kupplungen","Cash Cows: Universal Joints & Couplings")}</h3>
+          {[
+            { n: t("Kupplungen","Couplings"), val: "94 T\u20AC", growth: "-10%", desc: t("Leichter R\u00FCckgang von 104 auf 94 T\u20AC in 5 Jahren. Solide Marge (62%). Strategie: Bestand optimieren, Standardgr\u00F6\u00DFen ab Lager liefern. Cross-Selling mit Motoren und Getrieben verst\u00E4rken. Kein aktives Investment, aber Margenerhalt sichern.","Slight decline from 104 to 94 k\u20AC in 5 years. Solid margin (62%). Strategy: optimize inventory, deliver standard sizes from stock. Strengthen cross-selling with motors and gearboxes. No active investment, but secure margin retention."), action: t("MARGE SICHERN","SECURE MARGIN"), color: C.blue },
+            { n: t("Wellengelenke","Universal Joints"), val: "94 T\u20AC", growth: "+8%", desc: t("Stabiler Umsatz mit leichtem Wachstum (+8%). Marge bei 60%. Strategie: Standardprogramm beibehalten, Sondergr\u00F6\u00DFen bei Bedarf anbieten. Synergiepotenzial mit Kupplungsprogramm nutzen. Vertrieb \u00FCber Online-Shop ausbauen.","Stable revenue with slight growth (+8%). Margin at 60%. Strategy: maintain standard program, offer special sizes on demand. Leverage synergy with coupling program. Expand sales via online shop."), action: t("HALTEN & ONLINE","HOLD & ONLINE"), color: C.teal },
+          ].map((p, i) => (
+            <div key={i} style={{ marginBottom: 14, padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, background: `${p.color}06` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Tag color={C.textMid}>{p.val}</Tag>
+                  <Tag color={parseFloat(p.growth) >= 0 ? C.green : C.amber}>{p.growth}</Tag>
+                  <Tag color={p.color}>{p.action}</Tag>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+            </div>
+          ))}
+        </Card>
+
+        {/* Poor Dogs Assessment */}
+        <Card accent={C.red}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Poor Dogs: Detailbewertung & Strategie","Poor Dogs: Assessment & Strategy")}</h3>
+          {[
+            { n: t("Schneckengetriebe","Worm Gearboxes"), val: "85 T\u20AC", growth: "-27%", desc: t("R\u00FCckgang von 116 auf 85 T\u20AC. Technologisch veraltet, zunehmend durch effizientere Planetengetriebe ersetzt. Strategie: Sortiment reduzieren, nur margenstarke Standardgr\u00F6\u00DFen behalten. Keine Neuinvestition, kontrollierter R\u00FCckzug bis 2027.","Decline from 116 to 85 k\u20AC. Technologically outdated, increasingly replaced by more efficient planetary gearboxes. Strategy: reduce range, keep only high-margin standard sizes. No new investment, controlled exit by 2027."), action: t("AUSLAUFEN","PHASE OUT"), color: C.red },
+            { n: t("Kegelradgetriebe","Bevel Gearboxes"), val: "71 T\u20AC", growth: "-68%", desc: t("Dramatischer R\u00FCckgang von 224 auf 71 T\u20AC \u2014 st\u00E4rkster Verlust im Portfolio. Marktanteil verloren an g\u00FCnstigere Fernost-Anbieter. Strategie: Restbest\u00E4nde abverkaufen, keine Nachbestellung. Fokus auf h\u00F6herwertige Verzahnungsteile umlenken.","Dramatic decline from 224 to 71 k\u20AC \u2014 biggest loss in portfolio. Market share lost to cheaper Far East suppliers. Strategy: sell remaining stock, no reorders. Redirect focus to higher-value gearing parts."), action: t("ABVERKAUF","SELL OFF"), color: C.red },
+            { n: t("Alu-Rollenf\u00FChrungen","Alu Roller Guides"), val: "67 T\u20AC", growth: "-13%", desc: t("Moderater R\u00FCckgang von 77 auf 67 T\u20AC. Nischenprodukt f\u00FCr leichte Linearanwendungen. Strategie: Als Erg\u00E4nzung zum LinRol-Programm beibehalten, aber kein aktiver Vertrieb. Bei weiterem R\u00FCckgang unter 50 T\u20AC aus Sortiment nehmen.","Moderate decline from 77 to 67 k\u20AC. Niche product for light linear applications. Strategy: retain as complement to LinRol program, but no active sales effort. Remove from range if further decline below 50 k\u20AC."), action: t("BEOBACHTEN","MONITOR"), color: C.amber },
+          ].map((p, i) => (
+            <div key={i} style={{ marginBottom: 14, padding: 12, border: `1px solid ${p.color}30`, borderRadius: 10, background: `${p.color}06` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Tag color={C.textMid}>{p.val}</Tag>
+                  <Tag color={C.red}>{p.growth}</Tag>
+                  <Tag color={p.color}>{p.action}</Tag>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+            </div>
+          ))}
+        </Card>
+      </Grid>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: STRATEGY
+// ═══════════════════════════════════════════
+function StrategyPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("Strategischer Rahmen","STRATEGIC FRAMEWORK")}
+        title={t("Strategieplan 2026–2028","Strategy Plan 2026–2028")}
+        sub={t("Vier Wachstumssäulen · H1 2026 erreicht · Fokus auf 2027","Four Growth Pillars · H1 2026 achieved · Focus on 2027")}
+      />
+
+      {/* Time horizons */}
+      <Grid cols="repeat(4, 1fr)" gap={14} style={{ marginBottom: 28 }}>
+        {[
+          { h: t("H1 2026","H1 2026"), sub: t("erledigt","completed"), c: C.green, label: t("ERREICHT ✓","ACHIEVED ✓"), items: [t("Budgetfreigabe ✓","Budget approved ✓"), t("ISO-Zertifizierung ✓","ISO certification ✓"), t("KI-Projekte Vertrieb gestartet ✓","AI projects sales started ✓"), t("Exportquote ≥ 20% erreicht ✓","Export ratio ≥ 20% reached ✓"), t("Robotik-Beobachtung gestartet ✓","Robotics monitoring started ✓"), t("Lageraufbau Fokusprodukte ✓","Focus stock build-up ✓")] },
+          { h: t("H2 2026","H2 2026"), sub: t("2. Halbjahr","Second half"), c: C.copper, label: t("WACHSEN","GROW"), items: [t("Umsatz Richtung 2.250 T€","Revenue toward 2,250 k€"), t("30 Neukunden DACH","30 new customers DACH"), t("Fokusprodukte: Homepage + SEA","Focus products: homepage + SEA"), t("KI-Auftragsabwicklung Phase 1","AI order processing phase 1"), t("Dual Sourcing aufbauen","Build dual sourcing"), t("Jahresplanung 2027","2027 annual plan")] },
+          { h: "2027", sub: "Skalieren", c: C.teal, label: t("SKALIEREN","SCALE"), items: [t("Umsatz 2,6–3,0 Mio. €","Revenue 2.6–3.0M €"), t("Export halten & ausbauen","Hold & expand export"), t("KI-Chatbot produktiv","AI chatbot productive"), t("AT/CH ausbauen, NL/BE Partner","Expand AT/CH, NL/BE partners"), t("PIM & Produktkonfigurator","PIM & product configurator"), t("Robotik: ggf. Muster bestellen","Robotics: order samples if useful")] },
+          { h: t("2028+","2028+"), sub: "Vision", c: C.navy, label: t("FÜHREN","LEAD"), items: [t("Umsatz > 3 Mio. €","Revenue > 3M €"), t("3+ internationale Märkte","3+ international markets"), t("Digitaler Vorreiter im Segment","Digital leader in segment"), t("KI-gestützte Prozesse Standard","AI-supported processes standard"), t("Starkes, gewachsenes Team","Strong, grown team"), t("Smart-Factory-Partner","Smart factory partner")] },
+        ].map((s, i) => (
+          <Card key={i} accent={s.c}>
+            <Tag color={s.c} filled>{s.label}</Tag>
+            <div style={{ fontSize: 22, fontWeight: 800, color: s.c, fontFamily: "'Playfair Display', 'Georgia', serif", marginTop: 8 }}>{s.h}</div>
+            <div style={{ fontSize: 11, color: C.textLight, marginBottom: 14 }}>{s.sub}</div>
+            {s.items.map((it, j) => (
+              <div key={j} style={{ fontSize: 11.5, color: C.textMid, lineHeight: 1.4, marginBottom: 5, paddingLeft: 12, borderLeft: `2px solid ${s.c}20`, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: s.c, flexShrink: 0, opacity: 0.6 }} />{it}
+              </div>
+            ))}
+          </Card>
+        ))}
+      </Grid>
+
+      {/* Radar + Growth Pillars */}
+      <Grid cols="2fr 3fr" gap={20} style={{ marginBottom: 24 }}>
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Strategische Radar-Analyse","Strategic Radar Analysis")}</h3>
+          <p style={{ fontSize: 11, color: C.textLight, margin: "0 0 12px 0" }}>{t("IST-Stand vs. ZIEL Ende 2026","Current vs. Target End 2026")}</p>
+          <ResponsiveContainer width="100%" height={280}>
+            <RadarChart data={radarIST.map(r => ({...r, dim: lang === "en" ? r.dimEn : r.dim}))}>
+              <PolarGrid stroke={C.borderLight} />
+              <PolarAngleAxis dataKey="dim" tick={{ fontSize: 9.5, fill: C.textMid }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
+              <Radar name={t("IST","ACTUAL")} dataKey="ist" stroke={C.red} fill={C.red} fillOpacity={0.15} strokeWidth={2} />
+              <Radar name={t("ZIEL '26","TARGET '26")} dataKey="ziel" stroke={C.green} fill={C.green} fillOpacity={0.1} strokeWidth={2} />
+              <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center", fontSize: 11 }}>
+            <span style={{ color: C.red }}>● {t("IST-Stand","Current")}</span>
+            <span style={{ color: C.green }}>● {t("ZIEL 2026","TARGET 2026")}</span>
+          </div>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("4 strategische Wachstumssäulen (Ansoff-Logik)","4 Strategic Growth Pillars (Ansoff)")}</h3>
+          <Grid cols="1fr 1fr" gap={12}>
+            {[
+              { title: t("🌍 Marktentwicklung","🌍 Market Development"), sub: t("Bestehende Produkte → Neue Märkte","Existing Products → New Markets"), desc: t("Österreich & Schweiz: Direktvertrieb. Niederlande & Belgien: Distributionspartner. Website EN, lokale SEO. Exportquote ≥ 20% halten (Q1 ~24%).","Austria & Switzerland: direct sales. Netherlands & Belgium: distribution partners. Website EN, local SEO. Hold export ratio ≥ 20% (Q1 ~24%)."), target: t("Export ≥ 20% halten","Hold export ≥ 20%"), color: C.blue },
+              { title: t("📦 Marktdurchdringung","📦 Market Penetration"), sub: t("Bestehende Produkte → Bestehende Märkte","Existing Products → Existing Markets"), desc: t("Fokusprodukte ab Lager (LinRol, Magnet, Verzahnung). Auf der Homepage in den Mittelpunkt + SEA-Budget (Google Ads). DACH-Akquise, AT-Pilot.","Focus products ex stock (LinRol, magnetic, gearing). Center stage on homepage + SEA budget (Google Ads). DACH acquisition, AT pilot."), target: t("30 Neukunden DACH","30 new customers DACH"), color: C.teal },
+              { title: t("🔍 Beobachten & Erproben","🔍 Watch & Try"), sub: t("Neue Felder → vorsichtig testen","New fields → test carefully"), desc: t("Robotik-Markt beobachten, bei Bedarf Muster bestellen. Lasergravurmaschine angestoßen (eigene Kennzeichnung). Standardprodukt-Bundles für 48h-Lieferung.","Watch the robotics market, order samples if needed. Laser engraver initiated (own marking). Standard product bundles for 48h delivery."), target: t("Muster statt Risiko","Samples, not risk"), color: C.copper },
+              { title: t("⚡ Operative Exzellenz","⚡ Operational Excellence"), sub: t("Effizienz + Fundament","Efficiency + Foundation"), desc: t("KI-Auftragsabwicklung (schneller, weniger Routine). Dual Sourcing. Materialquote senken (Q1 schon 32,9%). ISO ✓.","AI order processing (faster, less routine). Dual sourcing. Lower material ratio (Q1 already 32.9%). ISO ✓."), target: t("Schneller & schlanker","Faster & leaner"), color: C.navy },
+            ].map((s, i) => (
+              <div key={i} style={{ padding: 14, borderRadius: 10, border: `1px solid ${s.color}20`, background: `${s.color}04` }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: s.color, marginBottom: 2 }}>{s.title}</div>
+                <div style={{ fontSize: 10, color: C.textLight, marginBottom: 8, fontStyle: "italic" }}>{s.sub}</div>
+                <div style={{ fontSize: 11, color: C.textMid, lineHeight: 1.6, marginBottom: 10 }}>{s.desc}</div>
+                <Tag color={C.green}>{t("Ziel:","Target:")} {s.target}</Tag>
+              </div>
+            ))}
+          </Grid>
+        </Card>
+      </Grid>
+
+      <InfoBox title={t("Unsere Vision: schnell, verlässlich, digital","Our Vision: Fast, Reliable, Digital")} color={C.navy} icon="🎯">
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7 }}>
+          {t("TEA wird der schnelle, verlässliche Antriebstechnik-Partner im DACH-Raum. Mit ","TEA becomes the fast, reliable drive technology partner in the DACH region. With ")}<strong>{t("neuen europäischen Märkten","new European markets")}</strong>{t(", einem ",", a ")}<strong>{t("fokussierten Lager","focused inventory")}</strong>{t(" und "," and ")}<strong>{t("KI-gestützten Prozessen","AI-supported processes")}</strong>{t(" bauen wir auf 60+ Jahren Expertise auf. Den Robotik-Markt beobachten wir aufmerksam und steigen mit Mustern ein, wenn es sich lohnt. Das wichtigste Asset dabei: unser Team."," we build on 60+ years of expertise. We watch the robotics market closely and enter with samples when it pays off. The most important asset: our team.")}
+        </p>
+      </InfoBox>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: DIGITALIZATION & AI
+// ═══════════════════════════════════════════
+function DigitalPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("KI & Automatisierung","AI & AUTOMATION")}
+        title={t("KI-Plan 2026 — der Kurzüberblick","AI Plan 2026 — The Short Overview")}
+        sub={t("Vom flexiblen Händler zum KI-gestützten Lösungsanbieter · Projektplan v1.2 (Stand Mai 2026)","From flexible trader to AI-supported solution provider · Project plan v1.2 (May 2026)")}
+      />
+
+      {/* Kernidee in einem Satz */}
+      <Card accent={C.teal} style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 8px 0" }}>{t("Worum geht es?","What is it about?")}</h3>
+        <p style={{ fontSize: 13, color: C.textMid, lineHeight: 1.7, margin: 0 }}>
+          {t("Das Kernproblem: ","The core problem: ")}<em style={{ color: C.text }}>{t("„Kunden ohne Fachwissen, wir ohne festes Portfolio — jede Anfrage ein Aufwand, zu selten ein Auftrag.“","„Customers without expertise, we without a fixed portfolio — every inquiry is effort, too rarely an order.“")}</em>{" "}
+          {t("Unsere Antwort: KI nutzen, um Anfragen schneller zu qualifizieren, Routinearbeit abzunehmen und am Ende eine zentrale Wissensdatenbank (KI-Chatbot) aufzubauen. ","Our answer: use AI to qualify inquiries faster, take over routine work and ultimately build a central knowledge base (AI chatbot). ")}
+          <strong style={{ color: C.copper }}>{t("Leitprinzip: erst Fundament & Quick Wins, dann der KI-Chatbot.","Guiding principle: foundation & quick wins first, then the AI chatbot.")}</strong>
+        </p>
+      </Card>
+
+      {/* Kernteam / Rahmen */}
+      <Grid cols="repeat(3, 1fr)" gap={14} style={{ marginBottom: 20 }}>
+        <Metric label={t("Kernteam","Core Team")} value="3" sub={t("Sebastian · Thomas · Martin","Sebastian · Thomas · Martin")} color={C.navy} small />
+        <Metric label={t("Kapazität","Capacity")} value={t("~18 h/Wo.","~18 h/wk")} sub={t("max. 2–3 Themen parallel","max. 2–3 topics in parallel")} color={C.copper} small />
+        <Metric label={t("Budget Jahr 1","Budget Year 1")} value="5–10 T€" sub={t("KI-Lizenzen, Tools, Chatbot-Pilot","AI licenses, tools, chatbot pilot")} color={C.teal} small />
+      </Grid>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 20 }}>
+        {/* Schritt A: Fundament & Quick Wins */}
+        <Card accent={C.copper}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: C.copper, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14 }}>A</div>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: 0 }}>{t("Fundament & Quick Wins","Foundation & Quick Wins")}</h3>
+          </div>
+          {[
+            { n: t("Work4All aufräumen","Tidy up Work4All"), d: t("OP-Listen automatisch zuordnen, Standard-Signaturen, Kurzanleitungen — sichtbar ab Tag 1.","Auto-assign open-item lists, standard signatures, quick guides — visible from day 1.") },
+            { n: t("Zentrales Wiki + KI-Lizenzen","Central wiki + AI licenses"), d: t("Pain Points, Projekte & KPIs an einem Ort. Wöchentliche KI-Sprechstunde, Lizenzen fürs Kernteam.","Pain points, projects & KPIs in one place. Weekly AI office hour, licenses for the core team.") },
+            { n: t("Strukturierter Anfrage-Input","Structured inquiry input"), d: t("Template/Web-Formular mit technischer Abfrage + automatische 48-h-Erinnerung. Single Source of Truth.","Template/web form with technical query + automatic 48h reminder. Single source of truth.") },
+            { n: t("KI-Vorlagen & Auswertungen","AI templates & reports"), d: t("Vorlagen-Bibliothek (Angebote, Anfragen, Reklamationen) und KI-gestützte W4A-Standardauswertungen.","Template library (quotes, inquiries, complaints) and AI-supported W4A standard reports.") },
+          ].map((p, i) => (
+            <div key={i} style={{ marginBottom: 10, paddingLeft: 12, borderLeft: `2px solid ${C.copper}30` }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{p.n}</div>
+              <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.d}</div>
+            </div>
+          ))}
+        </Card>
+
+        {/* Schritt B: Strategischer Kern */}
+        <Card accent={C.teal}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: C.teal, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14 }}>B</div>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: 0 }}>{t("Strategischer Kern: KI-Chatbot","Strategic Core: AI Chatbot")}</h3>
+          </div>
+          <p style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7, marginBottom: 12 }}>
+            {t("Ein KI-Chatbot mit zentraler Wissensdatenbank (RAG) bündelt unser Lieferanten- und Produktwissen an einem Ort. Er ","An AI chatbot with a central knowledge base (RAG) bundles our supplier and product knowledge in one place. It ")}
+            <strong style={{ color: C.text }}>{t("stellt die Fragen, die der Einkäufer nicht stellen kann","asks the questions a buyer cannot ask")}</strong>{t(", prüft Machbarkeit und liefert ein Indikativ-Angebot in Minuten. Der letzte Schritt — Preis & Termin bestätigen — bleibt beim Menschen.",", checks feasibility and delivers an indicative quote in minutes. The last step — confirming price & date — stays with a human.")}
+          </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[t("Anfrage","Inquiry"), t("→ KI qualifiziert","→ AI qualifies"), t("→ Machbarkeit","→ Feasibility"), t("→ Indikativ-Angebot","→ Indicative quote"), t("→ Mensch bestätigt","→ Human confirms")].map((step, i) => (
+              <div key={i} style={{ background: `${C.teal}10`, color: C.teal, borderRadius: 6, padding: "5px 9px", fontSize: 10.5, fontWeight: 600 }}>{step}</div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12, fontSize: 11, color: C.textLight, lineHeight: 1.6 }}>
+            {t("Pilot in Monat 3–6. Vorstufe zum PIM (zentrale Artikelanlage).","Pilot in month 3–6. Pre-stage to PIM (central article management).")}
+          </div>
+        </Card>
+      </Grid>
+
+      <Grid cols="2fr 1fr" gap={20}>
+        {/* Roadmap kurz */}
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 12px 0" }}>{t("Ausblick","Outlook")}</h3>
+          <Grid cols="1fr 1fr" gap={12}>
+            <div style={{ padding: 12, borderRadius: 10, background: `${C.navy}06`, border: `1px solid ${C.border}` }}>
+              <Tag color={C.copper} filled>{t("12 Monate","12 Months")}</Tag>
+              <div style={{ fontSize: 11, color: C.textMid, lineHeight: 1.6, marginTop: 8 }}>
+                {t("KI-Chatbot/RAG kundenseitig produktiv · Auftragsstatus-Self-Service · W4A-Auswertungen als Dashboard · ISO-Doku ins Wiki.","AI chatbot/RAG live for customers · order status self-service · W4A reports as dashboard · ISO docs into wiki.")}
+              </div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 10, background: `${C.teal}06`, border: `1px solid ${C.border}` }}>
+              <Tag color={C.teal} filled>{t("3 Jahre","3 Years")}</Tag>
+              <div style={{ fontSize: 11, color: C.textMid, lineHeight: 1.6, marginTop: 8 }}>
+                {t("Angebotsentwurf aus Freitext · geführte Customer Journey auf der Website · PIM-System · Predictive Inventory · Lager-App ausgerollt.","Quote draft from free text · guided customer journey on the website · PIM system · predictive inventory · warehouse app rolled out.")}
+              </div>
+            </div>
+          </Grid>
+        </Card>
+
+        {/* Leitplanken */}
+        <Card accent={C.amber}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: C.amber, margin: "0 0 10px 0" }}>{t("Leitplanken","Guardrails")}</h3>
+          {[
+            t("Keine vollautomatische Preis-/Angebotslogik bei Sonderfällen — immer manuelle Bestätigung.","No fully automated price/quote logic for special cases — always manual confirmation."),
+            t("Datenbereinigung vor KI-Zugriff.","Data cleanup before AI access."),
+            t("Keine sensiblen Personendaten in öffentliche KI.","No sensitive personal data in public AI."),
+            t("Nie mehr als 2–3 Themen parallel — Reihenfolge schlägt Gleichzeitigkeit.","Never more than 2–3 topics in parallel — sequence beats simultaneity."),
+          ].map((g, i) => (
+            <div key={i} style={{ fontSize: 11, color: C.textMid, lineHeight: 1.5, marginBottom: 8, paddingLeft: 12, borderLeft: `2px solid ${C.amber}30` }}>{g}</div>
+          ))}
+        </Card>
+      </Grid>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: RISK MANAGEMENT (NEW!)
+// ═══════════════════════════════════════════
+function RiskPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  const riskColors = (score) => score >= 12 ? C.red : score >= 6 ? C.amber : C.green;
+
+  return (
+    <div>
+      <SectionHead
+        tag={t("Risiken","RISKS")}
+        title={t("Risiken — kompakt","Risks — Compact")}
+        sub={t("Die wichtigsten Risiken und wie wir gegensteuern","The key risks and how we counter them")}
+      />
+
+      <Grid cols="3fr 2fr" gap={20} style={{ marginBottom: 20 }}>
+        {/* Risk matrix visual */}
+        <Card>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Risikomatrix (Wahrscheinlichkeit × Auswirkung)","Risk Matrix (Probability × Impact)")}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "40px repeat(4, 1fr)", gridTemplateRows: "repeat(4, 56px) 26px", gap: 2 }}>
+            {[4, 3, 2, 1].map((y) => (
+              <div key={`y-${y}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.textLight, fontWeight: 600 }}>
+                {y === 4 ? t("Hoch","High") : y === 3 ? t("Mittel","Medium") : y === 2 ? t("Niedrig","Low") : t("Gering","Minor")}
+              </div>
+            ))}
+            {[4, 3, 2, 1].map(y =>
+              [1, 2, 3, 4].map(x => {
+                const cellRisks = risks.filter(r => r.prob === x && r.impact === y);
+                const severity = x * y;
+                return (
+                  <div key={`${x}-${y}`} style={{
+                    background: severity >= 12 ? `${C.red}15` : severity >= 6 ? `${C.amber}12` : `${C.green}08`,
+                    borderRadius: 6, padding: 4, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 2,
+                    border: `1px solid ${severity >= 12 ? `${C.red}25` : severity >= 6 ? `${C.amber}20` : `${C.green}15`}`,
+                  }}>
+                    {cellRisks.map((r, i) => (
+                      <div key={i} style={{
+                        fontSize: 8, fontWeight: 600, color: riskColors(x * y), textAlign: "center", lineHeight: 1.2,
+                        background: "#FFF", borderRadius: 3, padding: "2px 4px", maxWidth: "100%",
+                      }}>
+                        {(lang === "en" ? r.nameEn : r.name).substring(0, 22)}{(lang === "en" ? r.nameEn : r.name).length > 22 ? "…" : ""}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+            <div />
+            {[t("Gering","Minor"), t("Niedrig","Low"), t("Mittel","Medium"), t("Hoch","High")].map((l, i) => (
+              <div key={`x-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.textLight, fontWeight: 600 }}>{l}</div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 4, marginTop: 8, fontSize: 10, color: C.textLight }}>
+            <span>{t("← Eintrittswahrscheinlichkeit →","← Probability →")}</span>
+            <span style={{ marginLeft: "auto" }}>{t("↑ Auswirkung","↑ Impact")}</span>
+          </div>
+        </Card>
+
+        {/* Strengths / protective factors (short) */}
+        <Card accent={C.green}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.green, margin: "0 0 12px 0" }}>{t("Unsere Schutzfaktoren","Our Protective Factors")}</h3>
+          {[
+            { t: t("Eigenkapitalquote 89%","Equity ratio 89%"), d: t("Kerngesunde Bilanz, kaum Schulden — wir können Krisen aushalten.","Healthy balance sheet, almost no debt — we can withstand crises.") },
+            { t: t("Breites Portfolio","Broad portfolio"), d: t("11+ Warengruppen, keine gefährliche Abhängigkeit von einem Produkt.","11+ product groups, no dangerous dependency on a single product.") },
+            { t: t("Technische Expertise 60+ J.","Technical expertise 60+ yrs"), d: t("Beratung, Custom, Service — schwer kopierbar.","Consulting, custom, service — hard to copy.") },
+            { t: t("Inhabergeführt","Owner-managed"), d: t("Schnelle Entscheidungen, langfristige Orientierung.","Fast decisions, long-term orientation.") },
+          ].map((s, i) => (
+            <div key={i} style={{ marginBottom: 9, paddingLeft: 12, borderLeft: `2px solid ${C.green}30` }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{s.t}</div>
+              <div style={{ fontSize: 10.5, color: C.textLight, lineHeight: 1.5 }}>{s.d}</div>
+            </div>
+          ))}
+        </Card>
+      </Grid>
+
+      {/* Compact risk table */}
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Risiken & Gegenmaßnahmen","Risks & Countermeasures")}</h3>
+        <CompactTable
+          headers={[t("Risiko","Risk"), t("Kategorie","Category"), "Score", t("Gegenmaßnahme","Countermeasure")]}
+          rows={risks
+            .slice()
+            .sort((a, b) => (b.prob * b.impact) - (a.prob * a.impact))
+            .map(r => [
+              <span style={{ fontWeight: 600 }}>{lang === "en" ? r.nameEn : r.name}</span>,
+              <Tag color={C.navy}>{lang === "en" ? r.catEn : r.cat}</Tag>,
+              <Tag color={riskColors(r.prob * r.impact)} filled>{r.prob * r.impact}</Tag>,
+              <span style={{ fontSize: 10.5, color: C.textLight }}>{lang === "en" ? r.mitigationEn : r.mitigation}</span>,
+            ])}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: ROADMAP
+// ═══════════════════════════════════════════
+function RoadmapPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  const quarters = [
+    { q: t("H1 2026","H1 2026"), title: t("Geschafft!","Done!"), color: C.green, icon: "✅", items: [
+      { t: t("Budgetfreigabe erteilt","Budget approved"), dl: t("erledigt","done"), who: "GF", done: true },
+      { t: t("ISO-Zertifizierung abgeschlossen","ISO certification completed"), dl: t("erledigt","done"), who: "Thomas", done: true },
+      { t: t("KI-Projekte Vertrieb gestartet","AI projects sales started"), dl: t("erledigt","done"), who: "Sebastian", done: true },
+      { t: t("Exportquote ≥ 20% erreicht (Q1 ~24%)","Export ratio ≥ 20% reached (Q1 ~24%)"), dl: t("erledigt","done"), who: "Sebastian", done: true },
+      { t: t("Robotik-Markt-Beobachtung gestartet","Robotics market monitoring started"), dl: t("erledigt","done"), who: "Sebastian", done: true },
+      { t: t("Lasergravurmaschine angestoßen","Laser engraver initiated"), dl: t("läuft","ongoing"), who: "Sebastian", done: true },
+      { t: t("Lageraufbau Fokusprodukte gestartet","Focus stock build-up started"), dl: t("läuft","ongoing"), who: "Alex G./Thomas", done: true },
+    ]},
+    { q: "Q3 2026", title: t("Sichtbar werden","Become Visible"), color: C.copper, icon: "🚀", items: [
+      { t: t("Fokusprodukte auf Homepage live","Focus products live on homepage"), dl: "Q3", who: "Martin", done: false },
+      { t: t("SEA-Budget (Google Ads) auf Fokusprodukte","SEA budget (Google Ads) on focus products"), dl: "Q3", who: "Martin", done: false },
+      { t: t("KI-Auftragsabwicklung Phase 1","AI order processing phase 1"), dl: "Q3", who: "Sebastian/Martin", done: false },
+      { t: t("AT-Pilot Kaltakquise","AT pilot cold calling"), dl: "Q3", who: "Sebastian/Alex O.", done: false },
+      { t: t("Dual Sourcing aufbauen","Build dual sourcing"), dl: "Q3", who: "Thomas", done: false },
+    ]},
+    { q: "Q4 2026", title: t("Konsolidieren & Planen","Consolidate & Plan"), color: C.teal, icon: "🎯", items: [
+      { t: t("Marketing Automation live","Marketing automation live"), dl: "Q4", who: "Martin", done: false },
+      { t: t("Materialquote weiter senken","Further reduce material ratio"), dl: "Q4", who: "Thomas", done: false },
+      { t: t("Robotik: Muster prüfen / ggf. bestellen","Robotics: evaluate / order samples"), dl: "Q4", who: "Sebastian", done: false },
+      { t: t("KI-Chatbot Pilot vorbereiten","Prepare AI chatbot pilot"), dl: "Q4", who: "Thomas/Martin", done: false },
+      { t: t("Jahresplanung 2027 erstellen","Create 2027 annual plan"), dl: t("Dez","Dec"), who: t("Alle","All"), done: false },
+    ]},
+    { q: t("2027 Ausblick","2027 Outlook"), title: t("Skalieren","Scale"), color: C.navy, icon: "🌅", items: [
+      { t: t("Umsatz 2,6–3,0 Mio. €","Revenue 2.6–3.0M €"), dl: "2027", who: t("Alle","All"), done: false },
+      { t: t("KI-Chatbot produktiv (kundenseitig)","AI chatbot productive (customer-facing)"), dl: "2027", who: "Thomas/Martin", done: false },
+      { t: t("PIM & Produktkonfigurator","PIM & product configurator"), dl: "2027", who: "Martin", done: false },
+      { t: t("AT/CH ausbauen, NL/BE Partner","Expand AT/CH, NL/BE partners"), dl: "2027", who: "Sebastian", done: false },
+      { t: t("Predictive Inventory / Lager-App","Predictive inventory / warehouse app"), dl: "2027", who: "Thomas", done: false },
+    ]},
+  ];
+
+  return (
+    <div>
+      <SectionHead
+        tag={t("Umsetzungsplan","IMPLEMENTATION")}
+        title={t("Roadmap 2026/27","Roadmap 2026/27")}
+        sub={t("Was wir geschafft haben — und was als Nächstes kommt","What we have achieved — and what comes next")}
+      />
+
+      <Grid cols="1fr 1fr" gap={20}>
+        {quarters.map((q, qi) => (
+          <Card key={qi} accent={q.color}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 22 }}>{q.icon}</span>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: q.color, fontFamily: "'Playfair Display', 'Georgia', serif" }}>{q.q}</div>
+                </div>
+                <div style={{ fontSize: 12, color: C.textLight, marginTop: 2 }}>{q.title}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: q.color, fontFamily: "'Playfair Display', 'Georgia', serif" }}>
+                  {q.items.filter(i => i.done).length}/{q.items.length}
+                </div>
+                <div style={{ fontSize: 10, color: C.textLight }}>{t("erledigt","completed")}</div>
+              </div>
+            </div>
+
+            {q.items.map((item, i) => (
+              <div key={i} style={{
+                display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6,
+                padding: "7px 8px", borderRadius: 6,
+                background: item.done ? `${C.green}06` : "transparent",
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 5,
+                  border: `2px solid ${item.done ? C.green : C.border}`,
+                  background: item.done ? C.green : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, color: "#FFF", flexShrink: 0, marginTop: 1,
+                }}>
+                  {item.done ? "✓" : ""}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: item.done ? C.textLight : C.text, textDecoration: item.done ? "line-through" : "none" }}>{item.t}</div>
+                  <div style={{ fontSize: 10, color: C.textLight }}>{item.dl} · {item.who}</div>
+                </div>
+              </div>
+            ))}
+          </Card>
+        ))}
+      </Grid>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PAGE: KPIs & TRACKING
+// ═══════════════════════════════════════════
+function KPIPage({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  return (
+    <div>
+      <SectionHead
+        tag={t("Unsere Steuerung","OUR STEERING")}
+        title={t("Unsere Ziele & KPIs","Our Goals & KPIs")}
+        sub={t("Woran wir gemeinsam Erfolg messen — einfach und transparent","How we measure success together — simple and transparent")}
+      />
+
+      <Card style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Unsere Team-KPIs 2026/27","Our Team KPIs 2026/27")}</h3>
+        <p style={{ fontSize: 10.5, color: C.textLight, margin: "0 0 14px 0" }}>{t("Stand: Q1 2026 · Besprechung im Monatsmeeting (1. Arbeitstag)","As of: Q1 2026 · Reviewed in the monthly meeting (1st working day)")}</p>
+        <CompactTable
+          headers={["KPI", t("Stand Q1 '26","As of Q1 '26"), t("Ziel","Target"), t("Wer","Who")]}
+          rows={[
+            [t("Umsatz / Monat","Revenue / month"), <Tag color={C.amber}>{t("Ø 173 T€","avg 173 k€")}</Tag>, <strong>≥ 188 T€</strong>, "Vertrieb"],
+            [t("Rohertragsmarge","Gross margin"), <Tag color={C.green}>67%</Tag>, <strong>≥ 60%</strong>, t("Alle","All")],
+            [t("Exportquote","Export ratio"), <Tag color={C.green}>~24%</Tag>, <strong>≥ 20% ✓</strong>, "Sebastian"],
+            [t("Neukunden (DACH)","New customers (DACH)"), <Tag color={C.amber}>{t("läuft","ongoing")}</Tag>, <strong>≥ 30</strong>, "Vertrieb"],
+            ["Follow-up < 48h", <Tag color={C.amber}>~80%</Tag>, <strong>100%</strong>, "Alex O."],
+            [t("Liefertreue","Delivery reliability"), <Tag color={C.amber}>{t("messen","measure")}</Tag>, <strong>≥ 95%</strong>, "Thomas"],
+            [t("Materialquote","Material ratio"), <Tag color={C.green}>32,9%</Tag>, <strong>≤ 37% ✓</strong>, "Thomas"],
+            [t("Fokusprodukte ab Lager","Focus products ex stock"), <Tag color={C.teal}>{t("Aufbau","build-up")}</Tag>, <strong>{t("48h-Lieferung","48h delivery")}</strong>, "Lager/Einkauf"],
+          ]}
+        />
+      </Card>
+
+      <Grid cols="1fr 1fr" gap={20} style={{ marginBottom: 24 }}>
+        <Card accent={C.navy}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 14px 0" }}>{t("Unser Meeting-Rhythmus","Our Meeting Rhythm")}</h3>
+          {[
+            { name: t("Wöchentliches Vertriebs-Meeting","Weekly Sales Meeting"), when: t("Montag 9:00 Uhr","Monday 9:00 AM"), who: t("Vertriebsteam","Sales team"), agenda: t("Umsatz vs. Wochenziel, offene Angebote, 48h-Follow-up, Fokusprodukte","Revenue vs. weekly target, open quotes, 48h follow-up, focus products"), icon: "📊" },
+            { name: t("Monats-Review","Monthly Review"), when: t("1. Arbeitstag im Monat","1st working day of month"), who: t("Ganzes Team","Whole team"), agenda: t("Zahlen des Vormonats, KPI-Soll/Ist, was lief gut, was nehmen wir uns vor","Last month's figures, KPI target/actual, what went well, what's next"), icon: "📋" },
+          ].map((m, i) => (
+            <div key={i} style={{ marginBottom: 12, padding: 14, border: `1px solid ${C.border}`, borderRadius: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 18 }}>{m.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{m.name}</div>
+                  <div style={{ fontSize: 10, color: C.copper, fontWeight: 600 }}>{m.when}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: C.textLight, marginTop: 4 }}>
+                <strong>{t("Wer:","Who:")}</strong> {m.who}<br />
+                <strong>{t("Agenda:","Agenda:")}</strong> {m.agenda}
+              </div>
+            </div>
+          ))}
+        </Card>
+
+        <Card accent={C.copper}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.copper, margin: "0 0 14px 0" }}>{t("Worauf es jede Woche ankommt","What Matters Every Week")}</h3>
+          {[
+            { t: t("48h-Follow-up einhalten","Keep the 48h follow-up"), d: t("Jede Anfrage und jedes Angebot innerhalb von 48 Stunden nachfassen.","Follow up on every inquiry and quote within 48 hours."), who: "Vertrieb" },
+            { t: t("Fokusprodukte aktiv anbieten","Actively offer focus products"), d: t("LinRol, Magnetkupplungen, Verzahnungsteile — ab Lager, schnell lieferbar.","LinRol, magnetic couplings, gearing parts — ex stock, quick delivery."), who: t("Alle","All") },
+            { t: t("Saubere Daten in Work4All","Clean data in Work4All"), d: t("Vollständige Anfragedaten = bessere Auswertungen und später KI-Unterstützung.","Complete inquiry data = better reports and later AI support."), who: t("Alle","All") },
+            { t: t("Alte Bestände abverkaufen","Sell off old stock"), d: t("Auslaufartikel aktiv anbieten — macht Platz und Kapital frei.","Actively offer phase-out items — frees up space and capital."), who: "Lager/Vertrieb" },
+          ].map((a, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
+              <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${C.copper}`, flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{a.t}</div>
+                <div style={{ fontSize: 10, color: C.textLight, lineHeight: 1.5 }}>{a.d} · <span style={{ color: C.copper, fontWeight: 600 }}>{a.who}</span></div>
+              </div>
+            </div>
+          ))}
+        </Card>
+      </Grid>
+
+      <InfoBox title={t("Die Zukunft beginnt jetzt — mit uns allen","The Future Starts Now — With All of Us")} color={C.navy} icon="🚀">
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.7 }}>
+          {t("Die ersten 6 Monate 2026 haben gezeigt: Wenn wir zusammen anpacken, liefern wir starke Zahlen — trotz schwierigem Markt. TEA hat die Expertise, die Produkte und vor allem das Team.","The first 6 months of 2026 have shown: when we pull together, we deliver strong numbers — despite a difficult market. TEA has the expertise, the products and above all the team.")}
+          <strong>{t(" Lasst uns dieses Fundament für 2027 weiter ausbauen."," Let's keep building this foundation for 2027.")}</strong>
+          <br /><br />
+          <em style={{ opacity: 0.7 }}>{t("„Die beste Zeit, einen Baum zu pflanzen, war vor 20 Jahren. Die zweitbeste Zeit ist jetzt.“","„The best time to plant a tree was 20 years ago. The second best time is now.“")}</em>
+        </p>
+      </InfoBox>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// MAIN APP — NAVIGATION & LAYOUT
+// ═══════════════════════════════════════════
+function TEADashboard({ lang }) {
+  const t = (de, en) => lang === "en" ? en : de;
+  const [page, setPage] = useState("cover");
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [page]);
+
+  const renderPage = () => {
+    switch (page) {
+      case "cover": return <CoverPage lang={lang} onStart={() => setPage("summary")} />;
+      case "summary": return <SummaryPage lang={lang} />;
+      case "finance": return <FinancePage lang={lang} />;
+      case "market": return <MarketPage lang={lang} />;
+      case "products": return <ProductsPage lang={lang} />;
+      case "strategy": return <StrategyPage lang={lang} />;
+      case "digital": return <DigitalPage lang={lang} />;
+      case "risk": return <RiskPage lang={lang} />;
+      case "roadmap": return <RoadmapPage lang={lang} />;
+      case "kpi": return <KPIPage lang={lang} />;
+      default: return <SummaryPage lang={lang} />;
+    }
+  };
+
+  if (page === "cover") {
+    return (
+      <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+        <CoverPage lang={lang} onStart={() => setPage("summary")} />
+      </div>
+    );
+  }
+
+  // Group pages for sidebar
+  let lastGroup = "";
+
+  return (
+    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: C.bg }}>
+      {/* Sidebar */}
+      <nav style={{
+        width: 210, background: C.navy, color: "#FFF", display: "flex", flexDirection: "column", flexShrink: 0,
+        borderRight: `1px solid ${C.navyLight}`,
+      }}>
+        {/* Logo */}
+        <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Playfair Display', 'Georgia', serif", letterSpacing: -0.5 }}>
+            TEA <span style={{ color: C.copper }}>2026</span>
+          </div>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 3, letterSpacing: 1, textTransform: "uppercase" }}>{t("Strategie fürs Team","Team Strategy")}</div>
+        </div>
+
+        {/* Navigation */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+          {PAGES.filter(p => p.id !== "cover").map((p) => {
+            const showGroup = p.group !== lastGroup && p.group !== "start";
+            lastGroup = p.group;
+            return (
+              <div key={p.id}>
+                {showGroup && (
+                  <div style={{ padding: "12px 18px 4px", fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 1.5, fontWeight: 700, textTransform: "uppercase" }}>
+                    {lang === "en" ? (EN_GRP[p.group] || GROUPS[p.group]) : GROUPS[p.group]}
+                  </div>
+                )}
+                <button onClick={() => setPage(p.id)} style={{
+                  display: "flex", alignItems: "center", gap: 9,
+                  width: "100%", padding: "9px 18px", border: "none",
+                  background: page === p.id ? "rgba(255,255,255,0.08)" : "transparent",
+                  color: page === p.id ? C.copper : "rgba(255,255,255,0.55)",
+                  cursor: "pointer", fontSize: 12, fontWeight: page === p.id ? 700 : 400,
+                  textAlign: "left",
+                  borderLeft: page === p.id ? `3px solid ${C.copper}` : "3px solid transparent",
+                  transition: "all 0.15s",
+                }}>
+                  <span style={{ fontSize: 11, opacity: 0.6, width: 16, textAlign: "center" }}>{p.icon}</span>
+                  {lang === "en" ? (EN_NAV[p.id] || p.label) : p.label}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "12px 18px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 9, color: "rgba(255,255,255,0.2)" }}>
+          TEA GmbH · Hamburg<br />{t("Stand Juni 2026 · Planung 2026/27","As of June 2026 · Plan 2026/27")}
+        </div>
+      </nav>
+
+      {/* Content */}
+      <main ref={contentRef} style={{ flex: 1, overflow: "auto", padding: "28px 36px" }}>
+        {renderPage()}
+      </main>
+    </div>
+  );
+}
+
+
+function RootApp() {
+  const [unlocked, setUnlocked] = React.useState(false);
+  const [lang, setLang] = React.useState('de');
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} lang={lang} setLang={setLang} />;
+  return (
+    <div>
+      <LangToggle lang={lang} setLang={setLang} />
+      <TEADashboard lang={lang} />
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<RootApp />);
+
+</script>
+</body>
+</html>
