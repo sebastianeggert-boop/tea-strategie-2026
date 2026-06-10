@@ -1204,14 +1204,30 @@ function ProductsPage({ lang }) {
               <Tag color={p.color}>{p.val}</Tag>
             </div>
           ))}
-          <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amber}20` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 3 }}>{t("⤵ Auslauf: alte Bestände abbauen","⤵ Phase-out: reduce old stock")}</div>
-            <div style={{ fontSize: 10.5, color: C.textMid, lineHeight: 1.5 }}>
-              {t("Kegelrad- und Schneckengetriebe im Abverkauf — sie binden Kapital, das wir umlenken.","Bevel and worm gearboxes on clearance — they tie up capital we redirect.")}
-            </div>
-          </div>
         </Card>
       </Grid>
+
+      <Card accent={C.red} style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: "0 0 6px 0" }}>{t("Poor Dogs: Detailbewertung & Strategie","Poor Dogs: Assessment & Strategy")}</h3>
+        <p style={{ fontSize: 11, color: C.textLight, margin: "0 0 14px 0" }}>{t("Diese Gruppen laufen aus — sie binden Kapital, das wir in die Fokusprodukte umlenken.","These groups are phasing out — they tie up capital we redirect to the focus products.")}</p>
+        {[
+          { n: t("Schneckengetriebe","Worm Gearboxes"), val: "85 T€", growth: "-27%", desc: t("Rückgang von 116 auf 85 T€. Technologisch veraltet, zunehmend durch effizientere Planetengetriebe ersetzt. Strategie: Sortiment reduzieren, nur margenstarke Standardgrößen behalten. Keine Neuinvestition, kontrollierter Rückzug bis 2027.","Decline from 116 to 85 k€. Technologically outdated, increasingly replaced by more efficient planetary gearboxes. Strategy: reduce range, keep only high-margin standard sizes. No new investment, controlled exit by 2027."), action: t("AUSLAUFEN","PHASE OUT"), color: C.red },
+          { n: t("Kegelradgetriebe","Bevel Gearboxes"), val: "71 T€", growth: "-68%", desc: t("Dramatischer Rückgang von 224 auf 71 T€ — stärkster Verlust im Portfolio. Marktanteil verloren an günstigere Fernost-Anbieter. Strategie: Restbestände abverkaufen, keine Nachbestellung. Fokus auf höherwertige Verzahnungsteile umlenken.","Dramatic decline from 224 to 71 k€ — biggest loss in portfolio. Market share lost to cheaper Far East suppliers. Strategy: sell remaining stock, no reorders. Redirect focus to higher-value gearing parts."), action: t("ABVERKAUF","SELL OFF"), color: C.red },
+          { n: t("Alu-Rollenführungen","Alu Roller Guides"), val: "67 T€", growth: "-13%", desc: t("Moderater Rückgang von 77 auf 67 T€. Nischenprodukt für leichte Linearanwendungen. Strategie: Als Ergänzung zum LinRol-Programm beibehalten, aber kein aktiver Vertrieb. Bei weiterem Rückgang unter 50 T€ aus Sortiment nehmen.","Moderate decline from 77 to 67 k€. Niche product for light linear applications. Strategy: retain as complement to LinRol program, but no active sales effort. Remove from range if further decline below 50 k€."), action: t("BEOBACHTEN","MONITOR"), color: C.amber },
+        ].map((p, i) => (
+          <div key={i} style={{ marginBottom: 12, padding: 12, border: `1px solid ${p.color}30`, borderRadius: 10, background: `${p.color}06` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.n}</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <Tag color={C.textMid}>{p.val}</Tag>
+                <Tag color={C.red}>{p.growth}</Tag>
+                <Tag color={p.color}>{p.action}</Tag>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: C.textLight, lineHeight: 1.5 }}>{p.desc}</div>
+          </div>
+        ))}
+      </Card>
 
       <InfoBox title={t("Aus dem Lager einen Vertriebsvorteil machen","Turning Inventory into a Sales Advantage")} color={C.navy} icon="📦">
         <p style={{ margin: 0 }}>
